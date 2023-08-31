@@ -1,0 +1,13 @@
+logs
+*.log
+npm-debug.log*
+
+**/.idea
+**/node_modules
+**/lib
+
+**/.git
+**/.github
+**/.svn
+**/.hg
+**/node_modules

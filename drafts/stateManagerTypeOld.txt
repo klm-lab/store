@@ -1,0 +1,85 @@
+type NestedKeyTypes<S> = {
+  [Key in keyof S & string]: S[Key] extends
+    | Map<any, any>
+    | Date
+    | Set<any>
+    | Array<any>
+    ? Key
+    : S[Key] extends object
+    ?
+        | `${Key}`
+        | `${Key}.${NestedKeyTypes<S[Key]> extends infer U extends string
+            ? U
+            : never}`
+    : `${Key}`;
+}[keyof S & string];
+
+type DataOrActionsKeyTypes<S> = {
+  [Key in keyof S & string]: `${Key}._A` | `${Key}._D`;
+}[keyof S & string];
+
+type StoreObject<S, O> = O extends StoreOptionsEverywhere
+  ? {
+      dispatcher: O extends StoreOptionsGroup
+        ? {
+            [k in keyof S]: FunctionChainType<S[k], O>;
+          }
+        : FunctionChainType<S, O>;
+
+      useStore: StoreFunction<S, O>;
+    }
+  : StoreFunction<S, O>;
+
+type StateKeysType<S> = {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  [Key in keyof S & string]: keyof S[Key] extends Function ? `${Key}` : string;
+}[keyof S & string];
+
+type FunctionChainType<S, O> = {
+  [key in StateKeysType<S>]: (...values: unknown[]) => FunctionChainType<S, O>;
+};
+
+type StoreFunction<S, O> = (
+  target?: TargetType<S, O>,
+  willDefineLater?: boolean
+) => StoreOutputType<S, O>;
+
+type TargetType<S, O> = O extends StoreOptionsGroup
+  ? NestedKeyTypes<S> | DataOrActionsKeyTypes<S>
+  : NestedKeyTypes<S> | "_A" | "_D";
+
+type StoreOptionsEverywhere = {
+  dispatchMode: "everywhere";
+};
+
+type StoreOptionsGroup = {
+  storeType: "group";
+};
+
+//todo return type based on given target and if target empty, return S
+type StoreOutputType<S, O> = O extends StoreOptionsGroup ? any : any | S;
+
+type DefaultStoreOptionsType = {
+  storeType?: "group" | "slice";
+  dispatchMode?: "hook" | "everywhere";
+};
+
+type CreateStoreType<S, O> = O extends undefined
+  ? StoreFunction<S, O>
+  : StoreObject<S, O>;
+
+type StoreDataAndActionsType = {
+  store?: any;
+  actions?: any;
+};
+
+export type {
+  CreateStoreType,
+  NestedKeyTypes,
+  StoreFunction,
+  DefaultStoreOptionsType,
+  StoreOptionsEverywhere,
+  StoreObject,
+  StoreOptionsGroup,
+  StoreDataAndActionsType
+};

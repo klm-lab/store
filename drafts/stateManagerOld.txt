@@ -1,0 +1,470 @@
+import { StoreType } from "../../types";
+import { isSame } from "../../helpers/external";
+import { _validateStore } from "../../helpers/tools";
+import { _UtilError } from "../../helpers/error";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+const PRIVATE_STORE_EVENT = "privateStateChange";
+
+class StateController {
+  private readonly events: any;
+
+  constructor() {
+    this.events = {};
+  }
+
+  subscribe(event: string, listener: any) {
+    if (!(event in this.events)) {
+      this.events[event] = new Set();
+    }
+    this.events[event].add(listener);
+    return () => this.unsubscribe(event, listener);
+  }
+
+  unsubscribe(event: string, listener: any) {
+    if (event in this.events) {
+      this.events[event].delete(listener);
+    }
+  }
+
+  dispatch(event: string) {
+    if (!(event in this.events)) {
+      return;
+    }
+    this.events[event].forEach((listener: any) => listener());
+  }
+}
+
+const stateController = new StateController();
+
+class ObservableMap extends Map {
+  private event: string;
+
+  constructor() {
+    super();
+    this.event = "";
+  }
+
+  setEvent(event: string) {
+    this.event = event;
+  }
+
+  set(key: any, value: any) {
+    if (super.get(key) !== value) {
+      const result = super.set(key, value);
+      stateController.dispatch(this.event);
+      return result;
+    }
+    return this;
+  }
+
+  clear() {
+    super.clear();
+    stateController.dispatch(this.event);
+  }
+
+  delete(key: any) {
+    const result = super.delete(key);
+    stateController.dispatch(this.event);
+    return result;
+  }
+}
+
+class ObservableSet extends Set {
+  private event: string;
+
+  constructor() {
+    super();
+    this.event = "";
+  }
+
+  setEvent(event: string) {
+    this.event = event;
+  }
+
+  add(value: any) {
+    if (!super.has(value)) {
+      const result = super.add(value);
+      stateController.dispatch(this.event);
+      return result;
+    }
+    return this;
+  }
+
+  clear() {
+    super.clear();
+    stateController.dispatch(this.event);
+  }
+
+  delete(key: any) {
+    const result = super.delete(key);
+    stateController.dispatch(this.event);
+    return result;
+  }
+}
+
+class Store {
+  private readonly _store: any;
+  private _privateStore: any;
+  private readonly _privateStoreActions: any;
+  private readonly _actionsStore: any;
+
+  constructor() {
+    this._store = {};
+    this._privateStore = {};
+    this._privateStoreActions = {};
+    this._actionsStore = {};
+    this.init = this.init.bind(this);
+    this.chainActions = this.chainActions.bind(this);
+    this.createProxyValidator = this.createProxyValidator.bind(this);
+    this.handleObservable = this.handleObservable.bind(this);
+    this.assignObservableAndProxy = this.assignObservableAndProxy.bind(this);
+    this.removeObservableAndProxy = this.removeObservableAndProxy.bind(this);
+  }
+
+  get store() {
+    return this._store;
+  }
+
+  get privateStore() {
+    return this._privateStore;
+  }
+
+  get privateStoreActions() {
+    return this._privateStoreActions;
+  }
+
+  get actions() {
+    return this._actionsStore;
+  }
+
+  private separateActionsAndData(slice: any, parentKey: string) {
+    const store: any = {};
+    const actions: any = {};
+    for (const sliceKey in slice) {
+      const sliceData = slice[sliceKey];
+      if (typeof sliceData === "function") {
+        if (parentKey) {
+          //We got a function here. We add it to our storeActions
+          actions[parentKey] = {
+            // We make sure that older actions are preserved
+            ...actions[parentKey],
+            // We add the action
+            [sliceKey]: sliceData
+          };
+        } else {
+          //We got a function here. We add it to our storeActions
+          actions[sliceKey] = sliceData;
+        }
+      } else {
+        if (parentKey) {
+          // This is a data
+          store[parentKey] = {
+            // We make sure that older data are preserved
+            ...store[parentKey],
+            // we add the data
+            [sliceKey]: sliceData
+          };
+        } else {
+          // This is a data
+          store[sliceKey] = sliceData;
+        }
+      }
+    }
+    return { store, actions };
+  }
+
+  init(userStore: any) {
+    /*
+     * Because, data not followed a passing rules. We need
+     * to separate actions from data first
+     * */
+    for (const userStoreKey in userStore) {
+      // we get a slice ex: we get test from {test: any, other: any}
+      const slice = userStore[userStoreKey];
+      // we loop through slice (test) and separate data and actions
+      for (const sliceKey in slice) {
+        const sliceData = slice[sliceKey];
+        if (typeof sliceData === "function") {
+          //We got a function here. We add it to our storeActions
+          this._actionsStore[userStoreKey] = {
+            // We make sure that older actions are preserved
+            ...this._actionsStore[userStoreKey],
+            // We add the action
+            [sliceKey]: sliceData
+          };
+        } else {
+          // This is a data
+          this._store[userStoreKey] = {
+            // We make sure that older data are preserved
+            ...this._store[userStoreKey],
+            // we add the data
+            [sliceKey]: sliceData
+          };
+        }
+      }
+      // We create proxy for every stored data
+      this._store[userStoreKey] = this.assignObservableAndProxy(
+        this._store[userStoreKey],
+        userStoreKey
+      );
+      // We check if an action is present
+      if (this._actionsStore[userStoreKey]) {
+        // We get the slice actions: EX: test actions in store {test: {someAction: ()=> ...}.other: {someAction: () => ...}}
+        const actionsSlice = this._actionsStore[userStoreKey];
+        // we get the data with proxy of currentKey
+        const sliceData = this._store[userStoreKey];
+        /* We recreate actions passing proxy data
+         * There is no need to apply proxy on actions. That why we do this in a separate loop
+         * We also add chaining actions. So user can do actions().actions()....
+         */
+        for (const key in actionsSlice) {
+          // This the action define by the user
+          const userFunction = actionsSlice[key];
+          //Now we recreate actions and passing data to be updated and all other user params
+          this._actionsStore[userStoreKey][key] = function (...values: any) {
+            userFunction(sliceData, ...values);
+            return actionsSlice;
+          };
+        }
+      }
+    }
+  }
+
+  initPrivate(params: any) {
+    /*
+     * Because, data not followed a passing rules. We need
+     * to separate actions from data first
+     * */
+    for (const key in params) {
+      // we get private store elements contains actions and data)
+      const element = params[key];
+      if (typeof element === "function") {
+        // We got a function and store it in actionsStore
+        this._privateStoreActions[key] = element;
+      } else {
+        // We got a data and store it in store
+        this._privateStore[key] = element;
+      }
+    }
+    // We create proxy with the store
+    this._privateStore = this.assignObservableAndProxy(
+      this._privateStore,
+      PRIVATE_STORE_EVENT
+    );
+    /* We recreate actions passing proxy data
+     * We can not do it in one loop . Because, there is no need to apply proxy on actions.
+     * We also add chaining actions. So user can do actions().actions()....
+     * */
+    for (const key in this._privateStoreActions) {
+      const element = this._privateStoreActions[key];
+      // For 'this.' issue, we save the store and actions and pass it down
+      const sliceData = this._privateStore;
+      const actions = this._privateStoreActions;
+      this._privateStoreActions[key] = function (...values: any) {
+        element(sliceData, ...values);
+        return actions;
+      };
+    }
+  }
+
+  chainActions(data: any, currentSliceData: any) {
+    const patchedActions: any = {};
+    for (const actionsKey in data) {
+      patchedActions[actionsKey] = function (...values: any) {
+        data[actionsKey](currentSliceData, ...values);
+        return patchedActions;
+      };
+    }
+    return patchedActions;
+  }
+
+  createProxyValidator(event: string, assignObservableAndProxy: any) {
+    return {
+      set: function (state: any, key: any, value: any) {
+        if (!isSame(state[key], value)) {
+          state[key] = assignObservableAndProxy(value, event);
+          stateController.dispatch(event);
+        }
+        return true;
+      },
+      deleteProperty: (target: any, prop: any) => {
+        delete target[prop];
+        stateController.dispatch(event);
+        return true;
+      }
+    };
+  }
+
+  handleObservable(data: any, element: any, type: string, event: any) {
+    data.forEach((v: any, k: any) => {
+      if (type === "Map") {
+        element.set(
+          k,
+          event
+            ? this.assignObservableAndProxy(v, event)
+            : this.removeObservableAndProxy(v)
+        );
+      }
+      if (type === "Set") {
+        element.add(
+          event
+            ? this.assignObservableAndProxy(v, event)
+            : this.removeObservableAndProxy(v)
+        );
+      }
+    });
+    event && element.setEvent(event);
+    return element;
+  }
+
+  assignObservableAndProxy(data: any, event: string) {
+    if (data && data.constructor.name === "Array") {
+      return new Proxy(
+        data,
+        this.createProxyValidator(event, this.assignObservableAndProxy)
+      );
+    }
+    if (data && data.constructor.name === "Map") {
+      return this.handleObservable(data, new ObservableMap(), "Map", event);
+    }
+    if (data && data.constructor.name === "Set") {
+      return this.handleObservable(data, new ObservableSet(), "Set", event);
+    }
+    if (data && data.constructor.name === "Object") {
+      const entries: any = Object.entries(data).map(([key, value]) => {
+        return [key, this.assignObservableAndProxy(value, event)];
+      });
+      return new Proxy(
+        Object.fromEntries(entries),
+        this.createProxyValidator(event, this.assignObservableAndProxy)
+      );
+    }
+    return data;
+  }
+
+  removeObservableAndProxy(data: any) {
+    if (data && data.constructor.name === "Array") {
+      return data.map(this.removeObservableAndProxy);
+    }
+    if (data && data.constructor.name === "ObservableMap") {
+      return this.handleObservable(data, new Map(), "Map", null);
+    }
+    if (data && data.constructor.name === "ObservableSet") {
+      return this.handleObservable(data, new Set(), "Set", null);
+    }
+    if (data && data.constructor.name === "Object") {
+      const entries: any = Object.entries(Object.assign({}, data)).map(
+        ([key, value]) => {
+          return [key, this.removeObservableAndProxy(value)];
+        }
+      );
+      return Object.fromEntries(entries);
+    }
+    return data;
+  }
+}
+
+const appStore = new Store();
+
+export function createStore(store: StoreType) {
+  _validateStore(store);
+  appStore.init(store);
+}
+
+export function createPrivateStore<Obj>(store: Obj): () => Obj {
+  const privateStore = new Store();
+  privateStore.initPrivate(store);
+
+  function getData() {
+    return privateStore.removeObservableAndProxy(privateStore.privateStore);
+  }
+
+  return () => {
+    const [state, setState] = useState(getData());
+    const dispatchData = useCallback(function () {
+      setState(getData());
+    }, []);
+    useEffect(() => {
+      return stateController.subscribe(PRIVATE_STORE_EVENT, dispatchData);
+    }, []);
+
+    return {
+      ...state,
+      ...privateStore.privateStoreActions
+    } as Obj;
+  };
+}
+
+export const GlobalDispatcher = appStore.actions;
+
+function getData(paths: string[], target: string, willDefineLater = false) {
+  let result = appStore.store;
+  const storeKey = paths[0];
+  if (
+    process.env.NODE_ENV !== "production" &&
+    typeof result[storeKey] === "undefined"
+  ) {
+    throw _UtilError({
+      name: `Listening to ${target} changes`,
+      message: `${target} is undefined in the store`
+    });
+  }
+  if (paths[1] === "_D") {
+    return appStore.removeObservableAndProxy(result[storeKey]);
+  }
+  if (paths[1] === "_A") {
+    return appStore.actions[storeKey];
+  }
+
+  paths.forEach((p) => {
+    if (
+      process.env.NODE_ENV !== "production" &&
+      !willDefineLater &&
+      result &&
+      typeof result[p] === "undefined"
+    ) {
+      console.warn(`Target ${target} not defined`);
+      throw _UtilError({
+        name: `Connecting to ${target}`,
+        message: `${p} is undefined in the store`
+      });
+    }
+    result = result ? result[p] : undefined;
+  });
+
+  return appStore.removeObservableAndProxy(result);
+}
+
+export function useStore(target: string, willDefineLater = false) {
+  const [paths, initialState] = useMemo(() => {
+    if (
+      process.env.NODE_ENV !== "production" &&
+      (typeof target as unknown) !== "string"
+    ) {
+      throw _UtilError({
+        name: `Listening to ${target} changes`,
+        message: `${target} need to be a string path. Ex: "data.content.value or data"`
+      });
+    }
+
+    const paths = target.split(".");
+
+    return [paths, getData(paths, target, willDefineLater)];
+  }, [target]);
+  const [state, setState] = useState(initialState);
+  const dispatchData = useCallback(
+    function () {
+      setState(getData(paths, target, willDefineLater));
+    },
+    [paths]
+  );
+  useEffect(() => {
+    // This force a new render in dev mode to tell user that data is sync
+    process.env.NODE_ENV !== "production" && setState(initialState);
+    return paths[1] !== "actions"
+      ? stateController.subscribe(paths[0], dispatchData)
+      : () => void 0;
+  }, [dispatchData]);
+  return state;
+}

@@ -1,0 +1,53 @@
+
+function getIn<T extends object, K extends string>(
+  object: T,
+  path: K extends ValidatePath<T, K> ? K : ValidatePath<T, K>
+): DeepIdx<T, K> {
+  const parts = path.split(".");
+  return parts.reduce((result: any, key) => {
+    if (result !== undefined && result[key]) {
+      return result[key];
+    }
+
+    return undefined;
+  }, object) as any;
+}
+
+
+type DeepIdx<T, K extends string> =
+  K extends keyof T ? T[K] :
+  K extends `${infer K0}.${infer KR}` ?
+  K0 extends keyof T ? DeepIdx<T[K0], KR> : never
+  : never
+
+type ValidatePath<T, K extends string> =
+  K extends keyof T ? K :
+  K extends `${infer K0}.${infer KR}` ?
+  K0 extends keyof T ? `${K0}.${ValidatePath<T[K0], KR>}` : Extract<keyof T, string>
+  : Extract<keyof T, string>
+
+
+
+const data = {
+  suggestion: { a: { nested: true } }
+}
+type S = typeof data;
+function test(): S;
+function test<K extends string>(path: K extends ValidatePath<S, K> ? K : ValidatePath<S, K>): DeepIdx<S, K>
+function test<K extends string>(path?: K extends ValidatePath<S, K> ? K : ValidatePath<S, K>): DeepIdx<S, K> | S {
+  if (typeof path !== "string") return data;
+  return getIn<S, K>(data, path);
+}
+
+const v0 = test();
+
+console.log(v0)
+const v1 = test("suggestion");
+
+console.log(v1)
+const v2 = test("suggestion.a");
+
+console.log(v2);
+const v3 = test("suggestion.a.nested");
+
+console.log(v3)
