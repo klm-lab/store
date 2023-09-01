@@ -95,7 +95,7 @@ class Store {
           const userFunction = actionsSlice[key];
           //Now we recreate actions and passing data to be updated and all other user params
           this._actionsStore[userStoreKey][key] = function (...values: any) {
-            userFunction(...values)(sliceData);
+            userFunction(sliceData, ...values);
             return actionsSlice;
           };
         }
@@ -127,7 +127,7 @@ class Store {
       const sliceData = this._privateStore;
       const actions = this._privateStoreActions;
       this._privateStoreActions[key] = function (...values: any) {
-        element(...values)(sliceData);
+        element(sliceData, ...values);
         return actions;
       };
     }
