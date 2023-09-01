@@ -1,6 +1,6 @@
-import {_UtilError} from "../error";
-import {STORE_OPTIONS_KEYS} from "../../constants/internal";
-import type {DefaultStoreOptionsType} from "../../types";
+import { _UtilError } from "../error";
+import { STORE_OPTIONS_KEYS } from "../../constants/internal";
+import type { DefaultStoreOptionsType } from "../../types";
 
 class StoreController {
   readonly #events: any;
@@ -202,7 +202,7 @@ function checkStoreOptions(storeOptions: DefaultStoreOptionsType) {
     throw _UtilError({
       name: `Creating store`,
       message: `The storeOptions is not an object with '${STORE_OPTIONS_KEYS.join(
-          " & "
+        " & "
       )}' as properties. Correct it or remove it"`,
       state: storeOptions
     });
@@ -212,7 +212,7 @@ function checkStoreOptions(storeOptions: DefaultStoreOptionsType) {
     throw _UtilError({
       name: `Creating store`,
       message: `The storeOptions is empty, fill it with '${STORE_OPTIONS_KEYS.join(
-          " | "
+        " | "
       )}' as properties or remove it"`,
       state: storeOptions
     });
@@ -222,14 +222,14 @@ function checkStoreOptions(storeOptions: DefaultStoreOptionsType) {
       throw _UtilError({
         name: `Creating store`,
         message: `Only ${STORE_OPTIONS_KEYS.join(
-            " & "
+          " & "
         )} are allowed as options for the moment. Please remove ${optionsKey}`,
         state: storeOptions
       });
     }
     if (
-        optionsKey === "dispatchMode" &&
-        !["hook", "everywhere"].includes(storeOptions[optionsKey] as string)
+      optionsKey === "dispatchMode" &&
+      !["hook", "everywhere"].includes(storeOptions[optionsKey] as string)
     ) {
       throw _UtilError({
         name: `Creating store`,
@@ -243,17 +243,17 @@ function checkStoreOptions(storeOptions: DefaultStoreOptionsType) {
 function isSame(value1: any, value2: any): boolean {
   let isValid = true;
   if (
-      value1 === undefined ||
-      value1 === null ||
-      value2 === undefined ||
-      value2 === null
+    value1 === undefined ||
+    value1 === null ||
+    value2 === undefined ||
+    value2 === null
   ) {
     return Object.is(value1, value2);
   }
   if (
-      value1.constructor.name === "Array" &&
-      value2.constructor.name === "Array" &&
-      value1.length === value2.length
+    value1.constructor.name === "Array" &&
+    value2.constructor.name === "Array" &&
+    value1.length === value2.length
   ) {
     for (let i = 0; i < value1.length; i++) {
       isValid = isValid && isSame(value1[i], value2[i]);
@@ -264,16 +264,16 @@ function isSame(value1: any, value2: any): boolean {
     return isValid;
   }
   if (
-      ((value1 instanceof Set && value2 instanceof Set) ||
-          (value1 instanceof Map && value2 instanceof Map)) &&
-      value1.size === value2.size
+    ((value1 instanceof Set && value2 instanceof Set) ||
+      (value1 instanceof Map && value2 instanceof Map)) &&
+    value1.size === value2.size
   ) {
     const values1Iterator = value1.values();
     const values2Iterator = value2.values();
     for (let i = 0; i < value1.size; i++) {
       isValid =
-          isValid &&
-          isSame(values1Iterator.next().value, values2Iterator.next().value);
+        isValid &&
+        isSame(values1Iterator.next().value, values2Iterator.next().value);
       if (!isValid) {
         break;
       }
@@ -281,9 +281,9 @@ function isSame(value1: any, value2: any): boolean {
     return isValid;
   }
   if (
-      value1.constructor.name === "Object" &&
-      value2.constructor.name === "Object" &&
-      Object.keys(value1).length === Object.keys(value2).length
+    value1.constructor.name === "Object" &&
+    value2.constructor.name === "Object" &&
+    Object.keys(value1).length === Object.keys(value2).length
   ) {
     const values1Entries = Object.entries(value1);
     for (let i = 0; i < values1Entries.length; i++) {
@@ -298,6 +298,6 @@ function isSame(value1: any, value2: any): boolean {
 }
 
 export const _validateStore =
-    process.env.NODE_ENV !== "production" ? validateStore : () => void 0;
+  process.env.NODE_ENV !== "production" ? validateStore : () => void 0;
 export const _checkStoreOptions =
-    process.env.NODE_ENV !== "production" ? checkStoreOptions : () => void 0;
+  process.env.NODE_ENV !== "production" ? checkStoreOptions : () => void 0;

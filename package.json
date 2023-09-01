@@ -1,13 +1,13 @@
 {
   "name": "@klm-lab/store",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "State management",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
     "build": "npm ci && npm run build:noci",
     "dev:noci": "npm run lint:prettier && npm run build:webpack && npm run build:dts",
-    "build:noci": "npm run lint:prettier && npm run build:webpack && npm run build:dts",
+    "build:noci": "npm run clean && npm run lint:prettier && npm run build:webpack && npm run build:dts",
     "lint:prettier": "npm run lint && npm run prettier",
     "build:dts": "dts-bundle-generator --config ./dts.json && npm run clean:temp",
     "build:webpack:dev": "webpack --config webpack.config.dev.js",
@@ -34,7 +34,7 @@
     "type": "git",
     "url": "git+https://github.com/klm-lab/store.git"
   },
-  "author": "Arnaud Litaaba",
+  "author": "Arnaud Litaaba <litaabaarnaud@gmail.com>",
   "license": "MIT",
   "files": [
     "lib/**/*"
@@ -85,5 +85,8 @@
       "import": "./lib/index.js",
       "default": "./lib/index.js"
     }
-  }
+  },
+  "keywords": [
+    "react","store","proxy","state","state management"
+  ]
 }

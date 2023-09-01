@@ -3,16 +3,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   CreateStoreType,
   DefaultStoreOptionsType,
-  StoreFunction,
+  StoreFunctionType,
   StoreParamsType,
   UserParamsType
 } from "./types";
 import {
+  _checkStoreOptions,
+  _validateStore,
   assignObservableAndProxy,
   removeObservableAndProxy,
-  storeController,
-  _checkStoreOptions,
-  _validateStore
+  storeController
 } from "./helpers/tools";
 import { PRIVATE_STORE_EVENT } from "./constants/internal";
 
@@ -95,7 +95,7 @@ class Store {
           const userFunction = actionsSlice[key];
           //Now we recreate actions and passing data to be updated and all other user params
           this._actionsStore[userStoreKey][key] = function (...values: any) {
-            userFunction(sliceData, ...values);
+            userFunction(...values)(sliceData);
             return actionsSlice;
           };
         }
@@ -127,7 +127,7 @@ class Store {
       const sliceData = this._privateStore;
       const actions = this._privateStoreActions;
       this._privateStoreActions[key] = function (...values: any) {
-        element(sliceData, ...values);
+        element(...values)(sliceData);
         return actions;
       };
     }
@@ -138,7 +138,7 @@ function createStore<S, O extends DefaultStoreOptionsType>(
   store: S,
   storeOptions: O
 ): CreateStoreType<S, O>;
-function createStore<S, O>(store: S, storeOptions?: O): StoreFunction<S, O>;
+function createStore<S, O>(store: S, storeOptions?: O): StoreFunctionType<S, O>;
 
 function createStore(store: any, storeOptions: any) {
   _checkStoreOptions(storeOptions);
@@ -149,7 +149,7 @@ function createStore(store: any, storeOptions: any) {
     const useGroupStore = (target: string, willDefineLater = false) => {
       if (
         process.env.NODE_ENV !== "production" &&
-        ((typeof target as unknown) !== "string" || target === "")
+        ((typeof target as any) !== "string" || target === "")
       ) {
         throw _UtilError({
           name: `Connecting to ${target}`,
@@ -280,8 +280,7 @@ function useStore(
 
   useEffect(() => {
     // This force a new render in dev mode to tell user that data is sync
-    // process.env.NODE_ENV !== "production" &&
-    //   setState(initialState);
+    process.env.NODE_ENV !== "production" && setState(initialState);
     const EVENT = storeType === "group" ? paths[0] : PRIVATE_STORE_EVENT;
     return storeController.subscribe(EVENT, dispatchData);
   }, [dispatchData]);
