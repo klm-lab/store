@@ -1,6 +1,6 @@
 {
   "name": "@klm-lab/store",
-  "version": "1.0.3",
+  "version": "1.0.6",
   "description": "State management",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -87,6 +87,10 @@
     }
   },
   "keywords": [
-    "react","store","proxy","state","state management"
+    "react",
+    "store",
+    "proxy",
+    "state",
+    "state management"
   ]
 }

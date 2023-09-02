@@ -92,7 +92,7 @@ type FunctionChainType<S> = {
  * The scenario here is a grouped store. And in a grouped store,
  * we first have the groupKey or storeKey then have storeContent.
  * We make the storeKey a function that return all other functions
- * in the groupedStore[groupKey]. It islike we are fist calling
+ * in the groupedStore[groupKey]. It is like we are fist calling
  * groupedStore[groupKey]('called').someFunction().otherFunction()....
  * If we skip this part the groupedStore[groupKey] is not typed callable
  * but typed a value that contains otherFunctions.
@@ -169,7 +169,7 @@ type CustomSuggestionType<S, K> = K extends "_A"
 
 /* Interface allow me to override definitions with same name, same params with optional one or not.
  * For a reason that I ignore , replacing interface by conditional types doesn't work !.
- *  Do not lose time trying. Instead, we will check type of passed target
+ *  Do not lose time trying.
  * */
 
 /* StoreFunctionType has optional target params and return the storeOutput type
@@ -179,11 +179,7 @@ interface StoreFunctionType<S, O> {
   <TargetKey>(
     target?: TargetKey extends TargetType<S, O> ? TargetKey : TargetType<S, O>,
     willDefineLater?: boolean
-  ): /* We check if target is passed or not
-   * if so we return the StoreOutput based on target else
-   * We rewrite properties in state and return it
-   * */
-  TargetKey extends undefined | null | ""
+  ): TargetKey extends unknown
     ? O extends StoreOptionsGroup
       ? /* We rewrite the type of functions to match our definitions and merge others keys as they are.
          * But for group we extract first key and rewrite S[key],

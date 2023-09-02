@@ -58,6 +58,7 @@ type DefaultStoreOptionsType = {
  * All keys present in castedResult are not functions
  * */
 type NotFunctions<S> = {
+  // eslint-disable-next-line @typescript-eslint/ban-types
   [Key in keyof S]: keyof S[Key] extends Function ? never : Key;
 }[keyof S];
 
@@ -65,6 +66,7 @@ type NotFunctions<S> = {
  * in order to get key in any key that is not a function
  * */
 type DataOnlyType<S> = {
+  // eslint-disable-next-line @typescript-eslint/ban-types
   [key in NotFunctions<S>]: S[key];
 };
 
@@ -74,6 +76,7 @@ type DataOnlyType<S> = {
  * All keys present in castedResult are functions
  * */
 type OnlyFunctions<S> = {
+  // eslint-disable-next-line @typescript-eslint/ban-types
   [Key in keyof S]: keyof S[Key] extends Function ? Key : never;
 }[keyof S];
 
@@ -106,14 +109,12 @@ type FunctionKeyType<S> = (...values: unknown[]) => FunctionChainType<S>;
 type StoreOutputType<S, O, K> = O extends StoreOptionsGroup
   ? StoreGroupOutputType<S, K>
   : // We rewrite the type of functions to match our definitions and merge others keys as they are
-    SliceStoreOutputType<S, K>;
+    SliceStoreOutputType<FunctionChainType<S> & DataOnlyType<S>, K>;
 
 /* This is the StoreGroupOutputType,
  *For every k in S, it's check if any keyof state at the current key(k) position
  * keyof S[k] extends a function type, if so, we return the callable function rewrote
- * which return chain actions. If not we check if S[k] extends an object, if so, we check if S[K][nestedKey]
- * is a Function, if so, we rewrite that function else, we return S[K][nestedKey]. And id S[K] is not an object,we return
- * it because k is part of S.
+ * which return chain actions. If not we just return S[k] because k is part of S.
  *
  * If k is not part of S, then we have k.otherKey. We infer some type to k. It is like we split
  * k.otherKey to [k,otherKey], so we can work with both separately.
@@ -138,36 +139,18 @@ type StoreOutputType<S, O, K> = O extends StoreOptionsGroup
  *  will fail when checking if 45645 or ___ is part of S and then called CustomSuggestionType to do come check
  * */
 type StoreGroupOutputType<S, K> = K extends keyof S
-  ? keyof S[K] extends Function
+  ? // eslint-disable-next-line @typescript-eslint/ban-types
+    keyof S[K] extends Function
     ? FunctionKeyType<S>
-    : /* Second check to see if it is an object . Here the user send for example, modal as key
-     * which is some root key of the group. group.modal.....
-     **/
-    S[K] extends object
-    ? /* We check if his S[K][NK] extends Function, if so we rewrite functions
-       * else we return S[K][NK]
-       * **/
-      {
-        [NK in keyof S[K]]: keyof S[K][NK] extends Function
-          ? FunctionKeyType<S[K]>
-          : S[K][NK];
-      }
-    : // Nested is not an object
-      S[K]
+    : S[K]
   : K extends `${infer FirstKey}.${infer SecondKey}`
   ? FirstKey extends keyof S
     ? StoreGroupOutputType<S[FirstKey], SecondKey>
     : never
   : CustomSuggestionType<S, K>;
 
-// type NextKeyGroupType<S> = {
-//   [k in keyof S]:
-// }
-
 type SliceStoreOutputType<S, K> = K extends keyof S
-  ? keyof S[K] extends Function
-    ? FunctionKeyType<S>
-    : S[K]
+  ? S[K]
   : K extends `${infer FirstKey}.${infer SecondKey}`
   ? FirstKey extends keyof S
     ? SliceStoreOutputType<S[FirstKey], SecondKey>
@@ -194,11 +177,13 @@ type CustomSuggestionType<S, K> = K extends "_A"
  * */
 interface StoreFunctionType<S, O> {
   <TargetKey>(
+    target: TargetKey extends TargetType<S, O> ? TargetKey : TargetType<S, O>,
+    willDefineLater?: boolean
+  ): StoreOutputType<S, O, TargetKey>;
+  <TargetKey>(
     target?: TargetKey extends TargetType<S, O> ? TargetKey : TargetType<S, O>,
     willDefineLater?: boolean
-  ): TargetKey extends NonNullable<string>
-    ? StoreOutputType<S, O, TargetKey>
-    : O extends StoreOptionsGroup
+  ): O extends StoreOptionsGroup
     ? /* We rewrite the type of functions to match our definitions and merge others keys as they are.
        * But for group we extract first key and rewrite S[key],
        * because the firstKey of groupStore can never be a function
@@ -213,7 +198,7 @@ interface StoreFunctionType<S, O> {
 }
 
 /* StoreObjectType based on options returns an external dispatcher with a hook store
- * or only a hook store. if the external dispatcher is returned, it will only contain actions.
+ * or only a hook store. if the external dispatcher is return, it will only contain actions.
  * So we chain those actions. Remember in a group, rootStore keys can never be function. So same principe
  * we extract rootKey and chain nested ones
  * */

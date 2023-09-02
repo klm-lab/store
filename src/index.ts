@@ -146,7 +146,7 @@ function createStore(store: any, storeOptions: any) {
   if (storeOptions && storeOptions.storeType === "group") {
     _validateStore(store);
     appStore.init(store);
-    const useGroupStore = (target: string, willDefineLater = false) => {
+    const useGroupStore = (target?: string, willDefineLater = false) => {
       if (
         process.env.NODE_ENV !== "production" &&
         ((typeof target as any) !== "string" || target === "")
@@ -179,8 +179,15 @@ function createStore(store: any, storeOptions: any) {
 
   appStore.initPrivate(store);
 
-  const useSliceStore = (target?: string, willDefineLater = false) =>
-    useStore(
+  const useSliceStore = (target?: string, willDefineLater = false) => {
+    if (process.env.NODE_ENV !== "production" && target === "") {
+      throw _UtilError({
+        name: `Connecting to ${target}`,
+        message: `Target is optional for a slice. But it need to be valid is you want it. Actual value is empty, fix it or remove it`
+      });
+    }
+
+    return useStore(
       { target, willDefineLater },
       {
         storeType: "slice",
@@ -190,6 +197,7 @@ function createStore(store: any, storeOptions: any) {
         }
       }
     );
+  };
 
   if (storeOptions && storeOptions.dispatchMode === "everywhere") {
     return {
@@ -280,7 +288,13 @@ function useStore(
 
   useEffect(() => {
     // This force a new render in dev mode to tell user that data is sync
-    process.env.NODE_ENV !== "production" && setState(initialState);
+    // process.env.NODE_ENV !== "production" && setState(initialState);
+    process.env.NODE_ENV !== "production" &&
+      console.info(
+        "Stability log",
+        "you should see this message only in developement mode and once per connected store on every full page reload" +
+          ". If you see this in production, it means process.env.NODE_ENV does not exist or is not set to production"
+      );
     const EVENT = storeType === "group" ? paths[0] : PRIVATE_STORE_EVENT;
     return storeController.subscribe(EVENT, dispatchData);
   }, [dispatchData]);
