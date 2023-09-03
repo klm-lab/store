@@ -209,8 +209,9 @@ function createStore(store: any, storeOptions: any) {
   };
 
   if (storeOptions && storeOptions.dispatchMode === "everywhere") {
+    console.log("here");
     return {
-      dispatcher: appStore.actions,
+      dispatcher: appStore.privateStoreActions,
       useStore: useSliceStore
     };
   }
