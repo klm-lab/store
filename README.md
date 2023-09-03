@@ -9,10 +9,6 @@
 State management for any react application. It's small, fast and stable, no boilerplate, no side effects, no context provider. it embraces the power of hooks and lets you dispatch actions from anywhere. Comes with zero dependencies powered with typescript with strong and deep intellisense support.
 Typescript user or Javascript user, it doesn't matter. It is all for you
 
-## Motivation
-I just started it because I was tired of all the state management libraries out there and was trying to do less boilerplate, but turning the boilerpalte into a smaller boilerplate. My library
-All necessary action is handled by the library to assure that your component only render when really needed
-
 <!-- TABLE OF CONTENTS 
 <details>
   <summary>Table of Contents</summary>
