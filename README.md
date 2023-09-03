@@ -7,7 +7,9 @@
 
 # @klm-lab/store
 State management for any react application. It's small, fast and stable, no boilerplate, no side effects, no context provider. It embraces the power of hooks and lets you dispatch actions from anywhere. Comes with zero dependencies powered with typescript with strong and deep intellisense support.
-Typescript user or Javascript user, it doesn't matter. It is all for you
+Typescript user or Javascript user, it doesn't matter. It is all for you.<br/>
+
+<a align="center" href="https://codesandbox.io/s/store-demo-2lkdw4" target="_blank">View demo</a>   
 
 <!-- TABLE OF CONTENTS 
 <details>
@@ -277,6 +279,47 @@ if `process.env.NODE_ENV` is not exposed, expose it your self depending on tools
 * Maybe cross-env `cross-env NODE_ENV=production` when you are building your project
 * Or whatever the tools you are using
 
+#### Security 
+
+Do not mutate store like that. You will override the reference with a new object and break the store.
+Keep this in mind, slice or whatever the name you call it, is there as a reference of your real store.
+```js
+const useStore = createStore({
+  myValue: 10,
+  setData: (slice) => {
+    // ❌ Bad, Don't do for security and integrity reason.
+    slice = {
+      myValue: 11
+    }
+  }
+})
+```
+
+`slice` is there as reference to your store. Do not override the reference. Do like following lines
+```js
+const useStore = createStore({
+  myValue: 10,
+  setData: (slice) => {
+    // ✅ Good,
+    slice.MyValue = 11
+    // ✅ Good,
+    slice.MyValue = { 
+     // ...whatever you want
+    }
+    // ✅ Good, you can add new Props
+    slice.newProp = {
+      // ...whatever you want
+    }
+    // ✅ Good,
+    slice.props.data = {
+      someData: someValue
+      // ...whatever you want
+    }
+    // ✅ Good,
+    slice.props.data.someData += someValue
+  }
+})
+```
 
 #### Chain actions call issue
 

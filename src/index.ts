@@ -270,8 +270,7 @@ function getData(userParams: UserParamsType, storeParams: StoreParamsType) {
     result = result ? result[p] : undefined;
   });
 
-  const noProxyResult = removeObservableAndProxy(result);
-  return typeof result === "function" ? () => noProxyResult : noProxyResult;
+  return removeObservableAndProxy(result);
 }
 
 function useStore(
@@ -281,9 +280,13 @@ function useStore(
   const { target } = userParams;
   const { storeType, storeController } = storeParams;
 
-  const [paths, memoizedState] = useMemo(() => {
+  const [paths, memoizedState, EVENT] = useMemo(() => {
     const paths = target ? target.split(".") : [];
-    return [paths, getData({ paths, ...userParams }, storeParams)];
+    const EVENT =
+      storeType === "group"
+        ? paths[0] ?? GROUP_STORE_EVENT
+        : PRIVATE_STORE_EVENT;
+    return [paths, getData({ paths, ...userParams }, storeParams), EVENT];
   }, [target]);
 
   /*
@@ -336,10 +339,6 @@ function useStore(
 
   const dispatchData = useCallback(
     function (callback: any) {
-      const EVENT =
-        storeType === "group"
-          ? paths[0] ?? GROUP_STORE_EVENT
-          : PRIVATE_STORE_EVENT;
       const subscribe = storeType === "group" ? paths[1] : paths[0];
       if (subscribe === "_A") {
         return () => void 0;
