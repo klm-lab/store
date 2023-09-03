@@ -6,7 +6,7 @@
 </div>
 
 # @klm-lab/store
-State management for any react application. It's small, fast and stable, no boilerplate, no side effects, no context provider. it embraces the power of hooks and lets you dispatch actions from anywhere. Comes with zero dependencies powered with typescript with strong and deep intellisense support.
+State management for any react application. It's small, fast and stable, no boilerplate, no side effects, no context provider. It embraces the power of hooks and lets you dispatch actions from anywhere. Comes with zero dependencies powered with typescript with strong and deep intellisense support.
 Typescript user or Javascript user, it doesn't matter. It is all for you
 
 <!-- TABLE OF CONTENTS 
@@ -98,7 +98,7 @@ export const useExpStore = createStore({
 });
 
 ```
-As you see, data and actions are mixed together and are unordered. It is not a problem il will work 😀
+As you see, data and actions are mixed together and unordered. It is not a problem il will work 😀
 
 #### Create an organised data store
 
@@ -261,7 +261,7 @@ const allData = useExpStore("_D")
 ```
 
 ❗❗❗ Component will render when something change in the data when you extract all data. Even if the component does not consume all of that data <br/>
-Extract the all data only if the Component consume all of it, else extract the desired part
+Extract all data only if the Component consume all of it, else extract the desired part
 
 #### Performance
 
@@ -309,9 +309,9 @@ const store = createStore({
   it's not what we want
 * We can merge both logic in one action. This is the best thing to do here
 
-Both functions `updateValue` and `resetValue` change the same data `slice.value`. That is why we want to combine
+Both functions `updateValue` and `resetValue` change the same data `slice.value`. This is why we want to combine
 actions. <br>
-If they do not change same property, we can chain like we want even with async, no risk at all. But in our case, using chain give this
+If they do not change same property, we can chain like we want even with async actions, no risk at all. But in our case, using chain give this
 result
 
 ```js
@@ -384,12 +384,12 @@ export const useGroupStore = createStore({
       notificationStore.message = "Hi, I am here to notify you"
     }
   }
-  // this part is important, we pass a second arg to tell creatStore that it is a group not a slice
+  // this part is important, we pass a second arg to tell createStore that it is a group not a slice
 }, { storeType: "group" })
 ```
 
 To use it, just do the same thing as a slice with an extra step. Since it is a group, it is not advised to extract the
-whole group unless it is what you want. Again intellisense will be there to help you. No need to memoize your store
+whole group unless you know what you are doing. Intellisense will be there to help you. No need to memoize your store
 
 ```js
 const MyComponent = () => {
@@ -416,9 +416,10 @@ Or get all modalActions making `useGroupStore` PURE DISPATCHER
 
 ```js
 // all modal actions without data
+// this is a PURE DISPATCHER
 const modalActions = useGroupStore("modal._A")
 
-// specific modal action
+// specific modal action with PURE DISPATCHER
 const openModal = useGroupStore("modal.openModal")
 ```
 
@@ -432,7 +433,6 @@ const modalActions = useGroupStore("modal._D")
 const openModal = useGroupStore("modal.isOpen")
 ```
 
-> NOTE <br/>
 > ❗ Attention `_A` and `_D` does not work on grouped store without being prefixed with whatever the name of a slice in the group.<br/>
  If you see `_A` or `_D` as suggestions while your store is a group, That means you forget to add `storeType: "group"` as options. <br/>
  Without that `createStore` will consider it like a slice. Despite this fact targeting `_A` or `_D` will fail. <br/>
@@ -476,14 +476,14 @@ const actions = useStore("groupKey._A");
 
 Use the `useStore` in any component like before. Nothing changes. Extract what you want from the store , data, actions, whatever ...
 
-But now you are able to dispatch action from `GlobalDispatcher` too from any file like this
+But now you are able to dispatch action from `GlobalDispatcher` and from any file like this
 
 ```js
 import GroupGlobalDispatcher from "where_ever_it_is";
 
 //or
 
-import SliceGlobalDispatcher from "where_ever_is_is";
+import SliceGlobalDispatcher from "where_ever_it_is";
 
 // from a slice store
 SliceGlobalDispatcher.someAction().action().action(); //  and so on
@@ -497,14 +497,14 @@ GroupGlobalDispatcher.yourGroupKey.action().action(); //  and so on
 
 ## Available tools and options
 
-* `createStore` let you create a store by passing a slice or a group of data and actions.<br/><br/>
-* `storeOptions` an object with two options `storeType` and `dispatchMode`. If wanted need to be passed as a second argument of `createStore` <br/><br/>
-* `storeType`: A property of `storeOptions` which support two values `group` & `slice`.<br/><br/>
-* `dispatchMode`: A property of `storeOptions` which support two values `hook` & `everywhere`.<br/><br/>
-* `_A`: A key that can be passed to your slice `useStore` to get all actions in that store.<br/><br/>
-* `groupKey._A`: A key that can be passed to your grouped `useStore` to get all actions in that store.<br/><br/>
-* `._D`: A key that can be passed to your slice `useStore` to get all data in that store.<br/><br/>
-* `groupKey._D`: A key that can be passed to your grouped `useStore` to get all data in that store
+* `createStore` Let you create a store by passing a slice or a group of data and actions.
+* `storeOptions` An optional object with two options `storeType` and `dispatchMode`. Can be used as a second argument of `createStore` 
+* `storeType` A property of `storeOptions` which support two values `group` & `slice`.
+* `dispatchMode` A property of `storeOptions` which support two values `hook` & `everywhere`.
+* `_A` A key that can be passed to your slice store in order to get a PURE DISPATCHER with all actions in that store.
+* `groupKey._A` A key that can be passed to your grouped store in order to get a PURE DISPATCHER with all actions in that store.
+* `._D` A key that can be passed to your slice store in order to get all data in that store making it a PURE DATA CONSUMER.
+* `groupKey._D` A key that can be passed to your grouped store in order to get all data in that store making it a PURE DATA CONSUMER.
 
 <!-- LICENSE -->
 
