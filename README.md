@@ -6,9 +6,12 @@
 </div>
 
 # @klm-lab/store
-State management in pure, super-typed javascript with typescript powered by Proxy and REACT.
-If you trust `useState`, then you trust this library. It's built around react's `useState` hook.
-Getting an update is as easy as updating a state. All necessary action is handled by the library to assure that your component only render when really needed
+State management for any react application. It's small, fast and stable, no boilerplate, no side effects, no context provider. it embraces the power of hooks and lets you dispatch actions from anywhere. Comes with zero dependencies powered with typescript with strong and deep intellisense support.
+Typescript user or Javascript user, it doesn't matter. It is all for you
+
+## Motivation
+I just started it because I was tired of all the state management libraries out there and was trying to do less boilerplate, but turning the boilerpalte into a smaller boilerplate. My library
+All necessary action is handled by the library to assure that your component only render when really needed
 
 <!-- TABLE OF CONTENTS 
 <details>
@@ -50,19 +53,25 @@ Getting an update is as easy as updating a state. All necessary action is handle
 
 ## Usage
 
-### Slice store
-
-A store slice is just one part of your store. You can divide your store into several slices, or combine slices into one large
-store. When you create a store in slices, you can organize your data or mix it with actions. The choice is yours. But all actions must be at
-root level. In your actions, the first parameter
-will always be the store data, his name is yours. If you wish to pass other parameters, add them after the first parameter. Find out more here:
-<a href="#passing-parameter-to-actions">Passing parameters</a>. Let's take the following example
-
 ##### First import createStore
 
 ```js
 import { createStore } from "@klm-lab/store";
 ```
+
+With that you can create two types of store.
+* **Slice store**: A store that mind his own business
+* **Grouped store**: A group of slice store.
+
+
+### Slice store
+
+A slice store is just a part of your store. You can divide your store into several slices, or combine slices into one large
+store. When you create a store, you can organize your data or mix it with actions. The choice is yours. But all actions must be at
+root level. In your actions, the first parameter
+will always be the store data, his name is yours. If you want to pass other parameters, add them after the first parameter. Find out more here:
+<a href="#passing-parameter-to-actions">Passing parameters</a>. Let's take the following example
+
 
 #### Create a not organised data store
 
@@ -93,7 +102,7 @@ export const useExpStore = createStore({
 });
 
 ```
-As you see data and actions are mixed together and are unordered. It is not a problem il will work 😀
+As you see, data and actions are mixed together and are unordered. It is not a problem il will work 😀
 
 #### Create an organised data store
 
@@ -169,9 +178,10 @@ const MyComponent = () => {
   return <span>{exp}</span>;
 };
 ```
+With that MyComponent render if `exp` changes and if any value in `useExpStore` change. Sometimes it is what we want, so it is fine.
 
-* Ask `useExpStore` to extract the part you want for you. This will improve performance. Because the component will only
-  listen to extracted value changes.
+* Ask `useExpStore` to extract the part you want for you. This is useful if the component will only
+  listen to specific value changes. It is usually what most of us want
 
 ```js
 //My component
@@ -208,9 +218,10 @@ has no impact on performance.
 * Extract one action
 
 ```js
- const updateExp = useExpStore("updateExp");
+// Optimal way to extract 
+const updateExp = useExpStore("updateExp");
 
-// or
+// or default way
 
 const { updateExp } = useExpStore()
 
@@ -221,33 +232,61 @@ updateExp() // or
 updateExp().otherActions().updateExp() //and so on. depends on what you want
 ```
 
+Both have no impact on performance. Component that only extract action will never rerender if some data change. It is just a dispatcher. But if the same component extract also some data like this
+```js
+// Extracting action and exp value
+const { updateExp, exp } = useExpStore()
+```
+Then the component will render if `exp` change. <br/>
+The optimal way to extract only one action is to do so
+```js
+const updateExp = useExpStore("updateExp")
+```
+This is really optimal for extracting one action because no subscription is added and `useExpStore` is used are as PURE DISPATCHER.
+
 * Extract all actions or all data <br>
   Sometimes we want to extract all the data without the actions, and vice versa. You can proceed as follows
 
 ```js
-// extract all actions
+// extract all actions with optimal way
+// Making useExpStore PURE DISPATCHER 
 const allActions = useExpStore("_A");
-allActions.updateExp().doSomethingElse().updateExp()
+// allActions.updateExp().doSomethingElse().updateExp()
 
-// extract all data
+
+// extract all actions with default way
+const { actions1, actions2, ...etc } = useExpStore();
+// action1().actions2().doSomethingElse().action1()
+
+// extract all data with PURE DATA CONSUMER
 const allData = useExpStore("_D")
 // console.log(allData.exp)
 
 ```
 
-❗❗❗ Component will render when something change in the data when you extract all data. Even if the compoent does not consume all of that data ❗❗❗ <br/>
+❗❗❗ Component will render when something change in the data when you extract all data. Even if the component does not consume all of that data <br/>
 Extract the all data only if the Component consume all of it, else extract the desired part
 
 #### Performance
 
-Even if you call your action or chain of actions 100 times in a single click or once, you'll only get one rendering of your component, not 100 renderings. This applies to synchronous actions. Asynchronous actions render the component when they are ready.
-We cannot wait for all asynchronous actions to finish before render
+Even if you call your action or chain of actions 1000 times in a single click or once, you'll only get one rendering of your component, not 1000 renderings. This applies to synchronous actions. Asynchronous actions render the component when they are ready.
+We cannot wait for all asynchronous actions to finish before rerender
+
+#### Optimisation
+
+Usually in any react based app `process.env.NODE_ENV` is already exposed. And if so it is good for you because
+you are going to get the smallest and fastest version of this library.<br/>
+if `process.env.NODE_ENV` is not exposed, expose it your self depending on tools you are using. <br/>
+* Maybe webpack `--env.NODE_ENV="production"` when you are building your project
+* Maybe cross-env `cross-env NODE_ENV=production` when you are building your project
+* Or whatever the tools you are using
+
 
 #### Chain actions call issue
 
 Use chain actions with caution when using promises. Without promises, there's no risk. Enjoy. But with promises,
 Make sure that each action updates a different part
-of your store and not the same one. Or combine the logic of the actions. For example.
+of your store and not the same one. Or combine the logic of the actions. For example: 
 
 ```js
 const store = createStore({
@@ -271,12 +310,12 @@ const store = createStore({
 
 * We can convert action to synchronous, but it is not what we want.
 * We can change different part of store, `updateValue` changes `value` and `resetValue` changes another prop. But maybe
-  its not what we want
+  it's not what we want
 * We can merge both logic in one action. This is the best thing to do here
 
-Both functions `updateValue` and `resetValue` change the same data `slice.value`. That is why we want combine
+Both functions `updateValue` and `resetValue` change the same data `slice.value`. That is why we want to combine
 actions. <br>
-If they does not change same, we can chain like you want even with async, no risk at all. But in our case, using chain give this
+If they do not change same property, we can chain like we want even with async, no risk at all. But in our case, using chain give this
 result
 
 ```js
@@ -289,7 +328,7 @@ resetValue().updateValue() // <--- output 20
 
 * The revers calling `resetValue().updateValue()` match our expectation, because we first reset and then update.
   It is fine but still dangerous because we can not guarantee the response time of the api.
-* The default calling `updateValue().resetValue()` output `20`. because resetValue finish faster than updateValue and
+* The default calling `updateValue().resetValue()` output `20`. because `resetValue` finish faster than `updateValue` and
   nothing was reset. In
   fact none of these is safe. Below the correct way to achieve what we want
 
@@ -328,7 +367,7 @@ updateValue(params1, params2, otherParams)
 
 ### Group store
 
-A group store is a pack of multiple slice. To create it call the same api `createStore` like that
+A group store is a group of multiple slice. To create it call the same api `createStore` like that
 
 ```js
 import { createStore } from "@klm-lab/store"
@@ -353,15 +392,19 @@ export const useGroupStore = createStore({
 }, { storeType: "group" })
 ```
 
-To use it just do the same thing as a slice with an extra step. Since it is a group, it is not advised to extract the
-whole group. So `useGroupStore` will force you to provide a specific target <br/>
-`modal` or `notification`. Again intellisense will be there to help you. No need to memoize your store
+To use it, just do the same thing as a slice with an extra step. Since it is a group, it is not advised to extract the
+whole group unless it is what you want. Again intellisense will be there to help you. No need to memoize your store
 
 ```js
 const MyComponent = () => {
-  // connecting to modal data (contain actions)
+
+  // connecting to the group
+  const groupStore = useGroupStore();
+  
+  // connecting to modal data with actions
   const modalStore = useGroupStore("modal");
-  // connecting to notification data (contain actions)
+  
+  // connecting to notification data with actions
   const notificationStore = useGroupStore("notification")
 }
 ```
@@ -373,11 +416,12 @@ const modalIsOpen = useGroupStore("modal.isOpen")
 const notificationMessage = useGroupStore("notification.message")
 ```
 
-Or get all modalActions
+Or get all modalActions making `useGroupStore` PURE DISPATCHER
 
 ```js
 // all modal actions without data
 const modalActions = useGroupStore("modal._A")
+
 // specific modal action
 const openModal = useGroupStore("modal.openModal")
 ```
@@ -387,17 +431,19 @@ Or get all data
 ```js
 // all modal data without actions
 const modalActions = useGroupStore("modal._D")
+
 // specific modal data
 const openModal = useGroupStore("modal.isOpen")
 ```
 
-#### ❗ Attention `_A` and `_D` does not work on grouped store without being prefixed with whatever the name of a slice in the group.<br/>
-#### EX: (modal._A, yourSlice._A, etc...). Same thing for _D.
-#### _A, _D, works fine for slice. and groupKey._A, groupKey._D works fine for group
+> NOTE <br/>
+> ❗ Attention `_A` and `_D` does not work on grouped store without being prefixed with whatever the name of a slice in the group.<br/>
+ If you see `_A` or `_D` as suggestions while your store is a group, That means you forget to add `storeType: "group"` as options. <br/>
+ Without that `createStore` will consider it like a slice. Despite this fact targeting `_A` or `_D` will fail. <br/>
+ We do not enforce rules on you store architecture, therefore you need to set `storeType` options to `group` if you want a group<br/>
+ EX: (modal._A, yourGroupKey._A, yourGroupKey._D, etc...).
 
-This library does not allow you to extract all data at once in a groupStore. We want your component to mind his own
-business, So extract the data you need.
-But you can have access to an external dispatcher which can be use anywhere in your app. Inside a component or not,
+You can also have access to an external dispatcher which can be use anywhere in your app. Inside a component or not,
 inside a hook or not.
 
 ## External dispatcher
@@ -417,12 +463,19 @@ const storeWithExternalDispatcher = createStore(yourSliceStore | yourGroup,{
 With `everywhere` mode enabled for the dispatcher, here is the new way to consume data and dispatch actions
 ```js
 
+// This is your store like any other store. 
 export const useStore = storeWithExternalDispatcher.useStore;
 
+// This is a PURE DISPATCHER
 export const GlobalDispatcher = storeWithExternalDispatcher.dispatcher;
 
 // Consume your store like before
 const {someData} = useStore();
+
+// PURE DISPATCHER
+const actions = useStore("groupKey._A");
+
+// and so on
 ```
 
 Use the `useStore` in any component like before. Nothing changes. Extract what you want from the store , data, actions, whatever ...
@@ -430,16 +483,20 @@ Use the `useStore` in any component like before. Nothing changes. Extract what y
 But now you are able to dispatch action from `GlobalDispatcher` too from any file like this
 
 ```js
-import GlobalDispatcher from "where_ever_it_is";
+import GroupGlobalDispatcher from "where_ever_it_is";
+
+//or
+
+import SliceGlobalDispatcher from "where_ever_is_is";
 
 // from a slice store
-GlobalDispatcher.someAction().action().action() //  and so on
+SliceGlobalDispatcher.someAction().action().action(); //  and so on
 
-// From a group: EX: modal & notification
+// From a group: EX: modal
+GroupGlobalDispatcher.modal.action().action(); // and so on
 
-GlobalDispatcher.modal.action().action() // and so on
-//or
-GlobalDispatcher.notification.action().action() //  and so on
+// From a group: EX: yourGroupKey
+GroupGlobalDispatcher.yourGroupKey.action().action(); //  and so on
 ```
 
 ## Available tools and options

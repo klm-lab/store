@@ -1,6 +1,6 @@
 {
   "name": "@klm-lab/store",
-  "version": "1.0.6",
+  "version": "1.0.0",
   "description": "State management",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -68,7 +68,7 @@
     "lib": "lib"
   },
   "publishConfig": {
-    "registry": "http://localhost:8081/repository/klm-lab/"
+    "registry": "https://registry.npmjs.org"
   },
   "size-limit": [
     {

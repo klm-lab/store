@@ -6,6 +6,8 @@
  *
  * We infer U to extends string to be sure that we call recursive NestedKey only with a string key
  * */
+import { StoreController } from "../helpers/tools";
+
 type NestedKeyTypes<S> = {
   [Key in keyof S & string]: S[Key] extends
     | Map<any, any>
@@ -252,6 +254,7 @@ type UserParamsType = {
 type StoreParamsType = {
   store: StoreDataAndActionsType;
   storeType: "slice" | "group";
+  storeController: StoreController;
 };
 
 type ErrorType = {

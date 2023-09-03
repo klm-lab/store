@@ -1,8 +1,12 @@
 import { _UtilError } from "../error";
-import { STORE_OPTIONS_KEYS } from "../../constants/internal";
+import {
+  GROUP_STORE_EVENT,
+  PRIVATE_STORE_EVENT,
+  STORE_OPTIONS_KEYS
+} from "../../constants/internal";
 import type { DefaultStoreOptionsType } from "../../types";
 
-class StoreController {
+export class StoreController {
   readonly #events: any;
 
   constructor() {
@@ -27,28 +31,36 @@ class StoreController {
     if (!(event in this.#events)) {
       return;
     }
+    /* We check if someone subscribe to group event and if current event is not privateEvent.
+     * If so, we call all group listener else, we do nothing
+     * */
+    if (GROUP_STORE_EVENT in this.#events && event !== PRIVATE_STORE_EVENT) {
+      this.#events[GROUP_STORE_EVENT].forEach((listener: any) => listener());
+    }
+    /*
+     * We call the event listener
+     * */
     this.#events[event].forEach((listener: any) => listener());
   }
 }
 
-export const storeController = new StoreController();
-
 class ObservableMap extends Map {
-  #events: string;
+  readonly #event: string;
+  readonly #storeController: StoreController;
 
-  constructor() {
+  constructor(storeController: StoreController, event: string) {
     super();
-    this.#events = "";
-  }
-
-  setEvent(event: string) {
-    this.#events = event;
+    this.#event = event;
+    this.#storeController = storeController;
   }
 
   set(key: any, value: any) {
     if (super.get(key) !== value) {
-      const result = super.set(key, value);
-      storeController.dispatch(this.#events);
+      const result = super.set(
+        key,
+        assignObservableAndProxy(value, this.#event, this.#storeController)
+      );
+      dispatchEvent(this.#event, this.#storeController);
       return result;
     }
     return this;
@@ -56,32 +68,32 @@ class ObservableMap extends Map {
 
   clear() {
     super.clear();
-    storeController.dispatch(this.#events);
+    dispatchEvent(this.#event, this.#storeController);
   }
 
   delete(key: any) {
     const result = super.delete(key);
-    storeController.dispatch(this.#events);
+    dispatchEvent(this.#event, this.#storeController);
     return result;
   }
 }
 
 class ObservableSet extends Set {
-  #events: string;
+  readonly #event: string;
+  readonly #storeController: StoreController;
 
-  constructor() {
+  constructor(storeController: StoreController, event: string) {
     super();
-    this.#events = "";
-  }
-
-  setEvent(event: string) {
-    this.#events = event;
+    this.#event = event;
+    this.#storeController = storeController;
   }
 
   add(value: any) {
     if (!super.has(value)) {
-      const result = super.add(value);
-      storeController.dispatch(this.#events);
+      const result = super.add(
+        assignObservableAndProxy(value, this.#event, this.#storeController)
+      );
+      dispatchEvent(this.#event, this.#storeController);
       return result;
     }
     return this;
@@ -89,66 +101,109 @@ class ObservableSet extends Set {
 
   clear() {
     super.clear();
-    storeController.dispatch(this.#events);
+    dispatchEvent(this.#event, this.#storeController);
   }
 
   delete(key: any) {
     const result = super.delete(key);
-    storeController.dispatch(this.#events);
+    dispatchEvent(this.#event, this.#storeController);
     return result;
   }
 }
 
-function createProxyValidator(event: string) {
+function dispatchEvent(event: string, storeController: StoreController) {
+  /* We check if current event is not privateEvent.
+   * If so, we call all group listener else, we do nothing
+   * */
+  if (event !== PRIVATE_STORE_EVENT) {
+    storeController && storeController.dispatch(GROUP_STORE_EVENT);
+  }
+  /*
+   * We call the event listener
+   * */
+  storeController && storeController.dispatch(event);
+}
+
+function createProxyValidator(event: string, storeController: StoreController) {
   return {
     set: function (state: any, key: any, value: any) {
       if (!isSame(state[key], value)) {
-        state[key] = assignObservableAndProxy(value, event);
-        storeController.dispatch(event);
+        state[key] = assignObservableAndProxy(value, event, storeController);
+        dispatchEvent(event, storeController);
       }
       return true;
     },
     deleteProperty: (target: any, prop: any) => {
       delete target[prop];
-      storeController.dispatch(event);
+      dispatchEvent(event, storeController);
       return true;
     }
   };
 }
 
-function handleObservable(data: any, element: any, type: string, event: any) {
+function handleObservable(
+  data: any,
+  element: any,
+  type: string,
+  event: any,
+  storeController: StoreController | null
+) {
   data.forEach((v: any, k: any) => {
     if (type === "Map") {
       element.set(
         k,
-        event ? assignObservableAndProxy(v, event) : removeObservableAndProxy(v)
+        event
+          ? storeController &&
+              assignObservableAndProxy(v, event, storeController)
+          : removeObservableAndProxy(v)
       );
     }
     if (type === "Set") {
       element.add(
-        event ? assignObservableAndProxy(v, event) : removeObservableAndProxy(v)
+        event
+          ? storeController &&
+              assignObservableAndProxy(v, event, storeController)
+          : removeObservableAndProxy(v)
       );
     }
   });
-  event && element.setEvent(event);
   return element;
 }
 
-export function assignObservableAndProxy(data: any, event: string) {
+export function assignObservableAndProxy(
+  data: any,
+  event: string,
+  storeController: StoreController
+) {
   if (data && data.constructor.name === "Array") {
-    return new Proxy(data, createProxyValidator(event));
+    return new Proxy(data, createProxyValidator(event, storeController));
   }
   if (data && data.constructor.name === "Map") {
-    return handleObservable(data, new ObservableMap(), "Map", event);
+    return handleObservable(
+      data,
+      new ObservableMap(storeController, event),
+      "Map",
+      event,
+      storeController
+    );
   }
   if (data && data.constructor.name === "Set") {
-    return handleObservable(data, new ObservableSet(), "Set", event);
+    return handleObservable(
+      data,
+      new ObservableSet(storeController, event),
+      "Set",
+      event,
+      storeController
+    );
   }
   if (data && data.constructor.name === "Object") {
     const entries: any = Object.entries(data).map(([key, value]) => {
-      return [key, assignObservableAndProxy(value, event)];
+      return [key, assignObservableAndProxy(value, event, storeController)];
     });
-    return new Proxy(Object.fromEntries(entries), createProxyValidator(event));
+    return new Proxy(
+      Object.fromEntries(entries),
+      createProxyValidator(event, storeController)
+    );
   }
   return data;
 }
@@ -158,10 +213,10 @@ export function removeObservableAndProxy(data: any) {
     return data.map(removeObservableAndProxy);
   }
   if (data && data.constructor.name === "ObservableMap") {
-    return handleObservable(data, new Map(), "Map", null);
+    return handleObservable(data, new Map(), "Map", null, null);
   }
   if (data && data.constructor.name === "ObservableSet") {
-    return handleObservable(data, new Set(), "Set", null);
+    return handleObservable(data, new Set(), "Set", null, null);
   }
   if (data && data.constructor.name === "Object") {
     const entries: any = Object.entries(Object.assign({}, data)).map(
@@ -240,7 +295,7 @@ function checkStoreOptions(storeOptions: DefaultStoreOptionsType) {
   }
 }
 
-function isSame(value1: any, value2: any): boolean {
+export function isSame(value1: any, value2: any): boolean {
   let isValid = true;
   if (
     value1 === undefined ||

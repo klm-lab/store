@@ -1,5 +1,5 @@
 import { _UtilError } from "./helpers/error";
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   CreateStoreType,
   DefaultStoreOptionsType,
@@ -11,30 +11,24 @@ import {
   _checkStoreOptions,
   _validateStore,
   assignObservableAndProxy,
-  isSame,
   removeObservableAndProxy,
-  StoreController
+  storeController
 } from "./helpers/tools";
-import { GROUP_STORE_EVENT, PRIVATE_STORE_EVENT } from "./constants/internal";
+import { PRIVATE_STORE_EVENT } from "./constants/internal";
 
 class Store {
   private readonly _store: any;
-  private readonly _storeController: StoreController;
   private _privateStore: any;
   private _privateStoreActions: any;
   private readonly _actionsStore: any;
 
   constructor() {
-    this._storeController = new StoreController();
     this._store = {};
     this._privateStore = {};
     this._privateStoreActions = {};
     this._actionsStore = {};
     this.init = this.init.bind(this);
     this.separateActionsAndData = this.separateActionsAndData.bind(this);
-  }
-  get storeController() {
-    return this._storeController;
   }
 
   get store() {
@@ -84,8 +78,7 @@ class Store {
       // We create proxy for every stored data
       this._store[userStoreKey] = assignObservableAndProxy(
         this._store[userStoreKey],
-        userStoreKey,
-        this._storeController
+        userStoreKey
       );
       // We check if an action is present
       if (this._actionsStore[userStoreKey]) {
@@ -122,8 +115,7 @@ class Store {
     // We create proxy with the store
     this._privateStore = assignObservableAndProxy(
       this._privateStore,
-      PRIVATE_STORE_EVENT,
-      this._storeController
+      PRIVATE_STORE_EVENT
     );
     /* We recreate actions passing proxy data
      * We can not do it in one loop . Because, there is no need to apply proxy on actions.
@@ -158,10 +150,13 @@ function createStore(store: any, storeOptions: any) {
     _validateStore(store);
     appStore.init(store);
     const useGroupStore = (target?: string, willDefineLater = false) => {
-      if (process.env.NODE_ENV !== "production" && target === "") {
+      if (
+        process.env.NODE_ENV !== "production" &&
+        ((typeof target as any) !== "string" || target === "")
+      ) {
         throw _UtilError({
           name: `Connecting to ${target}`,
-          message: `Target is optional. But it need to be valid if passed. Actual value is empty, fix it or remove it`
+          message: `At least one target is required if you are using a grouped store. If you don't want to provide one, use a sliceStore instead by removing storeType from storeOptions or set it to "slice"`
         });
       }
       return useStore(
@@ -171,8 +166,7 @@ function createStore(store: any, storeOptions: any) {
           store: {
             store: appStore.store,
             actions: appStore.actions
-          },
-          storeController: appStore.storeController
+          }
         }
       );
     };
@@ -192,9 +186,10 @@ function createStore(store: any, storeOptions: any) {
     if (process.env.NODE_ENV !== "production" && target === "") {
       throw _UtilError({
         name: `Connecting to ${target}`,
-        message: `Target is optional. But it need to be valid if passed. Actual value is empty, fix it or remove it`
+        message: `Target is optional for a slice. But it need to be valid is you want it. Actual value is empty, fix it or remove it`
       });
     }
+
     return useStore(
       { target, willDefineLater },
       {
@@ -202,8 +197,7 @@ function createStore(store: any, storeOptions: any) {
         store: {
           store: appStore.privateStore,
           actions: appStore.privateStoreActions
-        },
-        storeController: appStore.storeController
+        }
       }
     );
   };
@@ -279,88 +273,38 @@ function useStore(
   storeParams: StoreParamsType
 ) {
   const { target } = userParams;
-  const { storeType, storeController } = storeParams;
+  const { storeType } = storeParams;
 
-  const [paths, memoizedState] = useMemo(() => {
+  const [paths, initialState] = useMemo(() => {
     const paths = target ? target.split(".") : [];
     return [paths, getData({ paths, ...userParams }, storeParams)];
   }, [target]);
 
-  /*
-   * We can create the snapShot like this
-   * let snapShot = getData({ paths, ...userParams }, storeParams);
-   * But since this hook will be called at each render, let's memoized the snapShot value.
-   * We do not even return directly the snapShot to user. One more reason to memoize it.
-   * We use the snapShot inside getSnapshot to keep same reference and avoid infinite render since useSyncExternalStore
-   * call getSnapshot multiple time, I guess for stability reason
-   * */
-  let snapShot = memoizedState;
-
-  const getSnapshot = useCallback(
-    function () {
-      // New data with new reference without proxy
-      const newData = getData({ paths, ...userParams }, storeParams);
-      /*
-       * We use our custom verification tool, because Object.is just verify the reference and not the content.
-       * Let's take snapShot = {value: 2} and newData = {value: 2}.
-       * Object.is(snapShot,newData) will return false because, newData reference change everyTime it is call.
-       * newData value is same as snapShot but newData reference is different from snapShot reference
-       * This is because proxy is removed from the data before return.
-       * */
-      if (isSame(snapShot, newData)) {
-        /*
-         * snapshot is equal to newData (new object without proxy),
-         * instead of return newData (new reference) and buy a ticket for infinite render,
-         * We return snapShot again to keep same reference and avoid infinite render
-         * */
-        return snapShot;
-      }
-
-      /* We override snapShot with newData because they are not the same
-       * At this point we can return snapshot or newData, it does not matter
-       * Because both are same. But its important override snapShop with newData to make them same by value.
-       * Since getSnapshot is called multiple time by useSyncExternalStore,
-       * in next call isSame check will be true, and we will return snapshot not newData,
-       * newData return a new object every time it is called, because he removes proxy on data before
-       * return it. Removing proxy generate new object. We do that to help the user.
-       * if he accidentally updates the data outside an action. it will not work.
-       * Every mutation is guarantee to be inside defined actions. Any outside
-       * mutation will fail and data integrity will be preserved
-       * */
-      snapShot = newData;
-      // return snapshot or newData, it doesn't matter
-      return snapShot;
-    },
-    [paths]
-  );
+  const [state, setState] = useState(initialState);
 
   const dispatchData = useCallback(
-    function (callback: any) {
-      const EVENT =
-        storeType === "group"
-          ? paths[0] ?? GROUP_STORE_EVENT
-          : PRIVATE_STORE_EVENT;
-      const subscribe = storeType === "group" ? paths[1] : paths[0];
-      if (subscribe === "_A") {
-        return () => void 0;
-      }
-      return storeController.subscribe(EVENT, callback);
+    function () {
+      setState(getData({ paths, ...userParams }, storeParams));
     },
     [paths]
   );
 
   useEffect(() => {
+    // This force a new render in dev mode to tell user that data is sync
+    process.env.NODE_ENV !== "production" && setState(initialState);
     if (
       !["development", "production"].includes(process.env?.NODE_ENV as string)
     ) {
       console.warn(
-        "@klm-lab/store",
         "process.env.NODE_ENV is not exposed. Make sure to expose it with 'production' value to be able to get the smallest and fastest" +
           " version of @klm-lab/store on production build"
       );
     }
-  }, []);
-  return useSyncExternalStore(dispatchData, getSnapshot, getSnapshot);
+
+    const EVENT = storeType === "group" ? paths[0] : PRIVATE_STORE_EVENT;
+    return storeController.subscribe(EVENT, dispatchData);
+  }, [dispatchData]);
+  return state;
 }
 
 export { createStore };
