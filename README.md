@@ -324,7 +324,7 @@ const useStore = createStore({
 #### Chain actions call issue
 
 Use chain actions with caution when using promises. Without promises, there's no risk. Enjoy. But with promises,
-Make sure that each action updates a different part
+Make sure that when call them each action updates a different part
 of your store and not the same one. Or combine the logic of the actions. For example: 
 
 ```js
@@ -334,18 +334,21 @@ const store = createStore({
     // setSomeData is slow api and finish in 1 second
     const res = await setSomeData();
     console.log(res) // <---- 20
-    // ❌ bad, we are updating value in an async operation while another action is doing the same
+    // ❗ risky, we are updating value in an async operation while another action is doing the same
     slice.value = res
   },
   resetValue: async (slice) => {
     // resetSomeData is fast api and finish in 1ms
     const res = await resetSomeData();
     console.log(res) // <---- 0
-    // ❌ bad, we are updating value in an async operation while another action is doing the same
+    // ❗ risky, we are updating value in an async operation while another action is doing the same
     slice.value = res
   }
 })
 ```
+
+It is risky if we call both actions at the same moment. If we call one by one based on event or something else, It is fine.
+But here
 
 * We can convert action to synchronous, but it is not what we want.
 * We can change different part of store, `updateValue` changes `value` and `resetValue` changes another prop. But maybe
@@ -427,11 +430,11 @@ export const useGroupStore = createStore({
       notificationStore.message = "Hi, I am here to notify you"
     }
   }
-  // this part is important, we pass a second arg to tell createStore that it is a group not a slice
-}, { storeType: "group" })
+  
+})
 ```
 
-To use it, just do the same thing as a slice with an extra step. Since it is a group, it is not advised to extract the
+To use it, just do the same thing as a slice. Since it is a group, it is not advised to extract the
 whole group unless you know what you are doing. Intellisense will be there to help you. No need to memoize your store
 
 ```js
@@ -476,37 +479,70 @@ const modalActions = useGroupStore("modal._D")
 const openModal = useGroupStore("modal.isOpen")
 ```
 
-> ❗ Attention `_A` and `_D` does not work on grouped store without being prefixed with whatever the name of a slice in the group.<br/>
- If you see `_A` or `_D` as suggestions while your store is a group, That means you forget to add `storeType: "group"` as options. <br/>
- Without that `createStore` will consider it like a slice. Despite this fact targeting `_A` or `_D` will fail. <br/>
- We do not enforce rules on you store architecture, therefore you need to set `storeType` options to `group` if you want a group<br/>
- EX: (modal._A, yourGroupKey._A, yourGroupKey._D, etc...).
+> We do not enforce rules on you store architecture except for actions who must be at root or first level of your store.
+```js
+// ✅ This is good                       // ✅ This is good. Reversing order is fine
+const sliceStore = {            |        const sliceStore = {
+  ...myData,                    |             ...MyActions,
+  ...myActions                  |             ...myData
+}                               |        }
+-------------------------------------------------------------------------------------------
 
-You can also have access to an external dispatcher which can be use anywhere in your app. Inside a component or not,
+// ✅ This is good.
+const myGroupStore = {
+  groupOne: {
+    ...groupOneData,
+    ...groupOneActions
+  },
+  groupTwo:{
+    ...groupTwoData,
+    ...groupTwoActions
+  }
+}
+
+// ❌ This is bad for sliceStore and will be converted to a group by the system
+const sliceStore = {
+  ...Mydata,
+  someData: {
+    ...myActions
+  },
+}
+
+// ❌ This is bad for groupStore and will be converted to a slice by the system
+const myGroupStore = {
+  groupOne: {
+    ...groupOneData,
+    ...groupOneActions
+  },
+  ...myActions
+}
+
+export const useStore = createStore(sliceStore | myGroupStore)
+```
+ 
+> If we found an action at root level, we create a slice with that action and ignore all other actions
+> If we found an action at next level, we create a group if no actions are present in root level and ignore all other actions.
+> Any very deep level actions will be ignored. you can do what you want with them ,but they will dispatch nothing
+> * Group store: actions inside the group root level,
+> * Slice store, actions at root level
+
+You also have access to an external dispatcher which can be use anywhere in your app. Inside a component or not,
 inside a hook or not.
 
 ## External dispatcher
-
-To get it add a second options to `createStore`. 
+ 
 > NOTE: It works for group or slice store.
 
 ```js
-const storeWithExternalDispatcher = createStore(yourSliceStore | yourGroup,{
-  dispatchMode: "everywhere"
-})
-```
-> NOTE <br/>
-> `dispatchMode` support two values : `everywhere` & `hook` <br/>
-> `storeType` support two values : `group` & `slice`;
+export const useStore = createStore(...);
 
-With `everywhere` mode enabled for the dispatcher, here is the new way to consume data and dispatch actions
+```
+
+Now you can consume data and dispatch actions
 ```js
 
-// This is your store like any other store. 
-export const useStore = storeWithExternalDispatcher.useStore;
-
 // This is a PURE DISPATCHER
-export const GlobalDispatcher = storeWithExternalDispatcher.dispatcher;
+export const GlobalDispatcher = useStore.dispatcher
 
 // Consume your store like before
 const {someData} = useStore();
@@ -538,12 +574,44 @@ GroupGlobalDispatcher.modal.action().action(); // and so on
 GroupGlobalDispatcher.yourGroupKey.action().action(); //  and so on
 ```
 
+## Events
+
+You can listen to certain store events that allow you to receive updates without rendering your component.
+Very useful when you want to update your user interface stateless. We all hate necessary rendering 😀.
+
+* Listen to `change` event. <br/>
+**change** is available for both group and slice stores. But keep this in mind. You will receive an update for all changes in the store,
+```js
+const myStore = createStore(...);
+
+myStore.on('change',(store) => {
+  // do whatever you want,
+})
+```
+The store you have received contains everything you need to consume or dispatch data.
+
+* Listen to specific event. Every key in your store is an event, except for the actions, which are a little different.
+```js
+const myStore = createStore(...);
+
+myStore.listenTo('data.content.value',(data) => {
+  // do what ever you want with your data,
+})
+```
+
+You can also listen to actions and be informed when it is triggered.
+```js
+const myStore = createStore(...);
+
+myStore.listenTo('data.someAction',(action) => {
+  // do what ever you want with your action,
+  // you can also dispatch
+})
+```
+
 ## Available tools and options
 
 * `createStore` Let you create a store by passing a slice or a group of data and actions.
-* `storeOptions` An optional object with two options `storeType` and `dispatchMode`. Can be used as a second argument of `createStore` 
-* `storeType` A property of `storeOptions` which support two values `group` & `slice`.
-* `dispatchMode` A property of `storeOptions` which support two values `hook` & `everywhere`.
 * `_A` A key that can be passed to your slice store in order to get a PURE DISPATCHER with all actions in that store.
 * `groupKey._A` A key that can be passed to your grouped store in order to get a PURE DISPATCHER with all actions in that store.
 * `._D` A key that can be passed to your slice store in order to get all data in that store making it a PURE DATA CONSUMER.

@@ -1,10 +1,9 @@
 import { _UtilError } from "../error";
 import {
   GROUP_STORE_EVENT,
-  PRIVATE_STORE_EVENT,
-  STORE_OPTIONS_KEYS
+  PRIVATE_STORE_EVENT
 } from "../../constants/internal";
-import type { DefaultStoreOptionsType } from "../../types";
+import { StoreParamsType, StoreType } from "../../types";
 
 export class StoreController {
   readonly #events: any;
@@ -28,14 +27,15 @@ export class StoreController {
   }
 
   dispatch(event: string) {
-    if (!(event in this.#events)) {
-      return;
-    }
     /* We check if someone subscribe to group event and if current event is not privateEvent.
      * If so, we call all group listener else, we do nothing
      * */
     if (GROUP_STORE_EVENT in this.#events && event !== PRIVATE_STORE_EVENT) {
       this.#events[GROUP_STORE_EVENT].forEach((listener: any) => listener());
+    }
+
+    if (!(event in this.#events)) {
+      return;
     }
     /*
      * We call the event listener
@@ -241,58 +241,46 @@ function validateStore(store: any) {
     if (store[storeKey]?.constructor.name !== "Object") {
       throw _UtilError({
         name: `Creating store`,
-        message: `Property ${storeKey} is not an object. If you want to create a a sliceStore. set storeOptions.storeType to 'slice' or remove storeOptions.storeType`,
+        message: `Property ${storeKey} is not an object. Any data + action give a slice. Any non object data without action give a slice. Any data without action give a group which required object as first entry.`,
         state: store[storeKey]
       });
     }
   }
 }
 
-function checkStoreOptions(storeOptions: DefaultStoreOptionsType) {
-  if (typeof storeOptions === "undefined") {
-    return;
-  }
-
-  if (storeOptions === null || storeOptions?.constructor?.name !== "Object") {
+export function getStoreType(store: any): StoreType {
+  let storeType: string = "slice";
+  if (typeof store === "undefined" || store === null) {
     throw _UtilError({
       name: `Creating store`,
-      message: `The storeOptions is not an object with '${STORE_OPTIONS_KEYS.join(
-        " & "
-      )}' as properties. Correct it or remove it"`,
-      state: storeOptions
+      message: `The store is empty`,
+      state: store
     });
   }
 
-  if (Object.keys(storeOptions).length <= 0) {
+  if (store?.constructor?.name !== "Object") {
     throw _UtilError({
       name: `Creating store`,
-      message: `The storeOptions is empty, fill it with '${STORE_OPTIONS_KEYS.join(
-        " | "
-      )}' as properties or remove it"`,
-      state: storeOptions
+      message: `The store is not an object`,
+      state: store
     });
   }
-  for (const optionsKey in storeOptions) {
-    if (!STORE_OPTIONS_KEYS.includes(optionsKey)) {
-      throw _UtilError({
-        name: `Creating store`,
-        message: `Only ${STORE_OPTIONS_KEYS.join(
-          " & "
-        )} are allowed as options for the moment. Please remove ${optionsKey}`,
-        state: storeOptions
-      });
-    }
+  const STORE_KEYS = Object.keys(store);
+  for (let i = 0; i < STORE_KEYS.length; i++) {
     if (
-      optionsKey === "dispatchMode" &&
-      !["hook", "everywhere"].includes(storeOptions[optionsKey] as string)
+      store[STORE_KEYS[i]] !== null &&
+      store[STORE_KEYS[i]].constructor.name === "Object"
     ) {
-      throw _UtilError({
-        name: `Creating store`,
-        message: `Property ${optionsKey} can only be 'hook' or 'everywhere'. Make sure it is otherwise, remove the options`,
-        state: storeOptions
-      });
+      storeType = "group";
+    } else {
+      if (typeof store[STORE_KEYS[i]] === "function") {
+        storeType = "slice";
+        break;
+      }
     }
   }
+
+  return storeType as StoreType;
 }
 
 export function isSame(value1: any, value2: any): boolean {
@@ -352,7 +340,114 @@ export function isSame(value1: any, value2: any): boolean {
   return Object.is(value1, value2);
 }
 
+function checkOnEvent(event: string) {
+  if (process.env.NODE_ENV !== "production" && event !== "change") {
+    throw _UtilError({
+      name: `Listen to event ${event}`,
+      message: `This listener is for change event. Pass event 'change' to be able to listen.`,
+      state: event
+    });
+  }
+}
+
+function checkStoreTarget(target?: string) {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    (target === "" || typeof target !== "string")
+  ) {
+    throw _UtilError({
+      name: `Connecting to ${target}`,
+      message: `Target is optional. But it need to be valid if passed. Actual value is empty, fix it or remove it`
+    });
+  }
+}
+
+export function checkReWriteStoreAndGetResult(
+  storeParams: StoreParamsType,
+  target?: string
+) {
+  const PATHS = target ? target.split(".") : [];
+  const { store, storeType } = storeParams;
+  let result: any = {};
+  if (storeType === "slice") {
+    result = {
+      ...store.store,
+      ...store.actions
+    };
+  } else {
+    for (const key in store.store) {
+      result[key] = {
+        ...store.store[key],
+        ...store.actions[key]
+      };
+    }
+  }
+
+  PATHS.forEach((p) => {
+    if (
+      process.env.NODE_ENV !== "production" &&
+      result &&
+      typeof result[p] === "undefined"
+    ) {
+      throw _UtilError({
+        name: `Connecting to ${target}`,
+        message: `${p} is undefined in the store.`
+      });
+    }
+
+    result = result ? result[p] : undefined;
+  });
+  return result;
+}
+
+function checkListenToEvent(
+  event: string,
+  callback: any,
+  storeParams: StoreParamsType
+) {
+  const { storeType } = storeParams;
+  if (
+    (process.env.NODE_ENV !== "production" &&
+      (typeof event as unknown) !== "string") ||
+    event === "" ||
+    event === null ||
+    event === undefined ||
+    typeof event === "undefined"
+  ) {
+    throw _UtilError({
+      name: `Listen to event ${event}`,
+      message: `Provide a valid event to be able to listen.`
+    });
+  }
+
+  const PATHS = event.split(".");
+  const storeKey = PATHS[0];
+  if (["_D", "_A"].includes(storeKey) && storeType === "slice") {
+    return;
+  }
+
+  if (["_D", "_A"].includes(PATHS[1]) && storeType === "group") {
+    return;
+  }
+
+  checkReWriteStoreAndGetResult(storeParams, event);
+
+  if (typeof callback !== "function") {
+    throw _UtilError({
+      name: `Listen to event ${event}`,
+      message: `Provide a valid callback, a function to be able to listen.`
+    });
+  }
+}
+
 export const _validateStore =
   process.env.NODE_ENV !== "production" ? validateStore : () => void 0;
-export const _checkStoreOptions =
-  process.env.NODE_ENV !== "production" ? checkStoreOptions : () => void 0;
+
+export const _checkOnEvent =
+  process.env.NODE_ENV !== "production" ? checkOnEvent : () => void 0;
+
+export const _checkListenToEvent =
+  process.env.NODE_ENV !== "production" ? checkListenToEvent : () => void 0;
+
+export const _checkStoreTarget =
+  process.env.NODE_ENV !== "production" ? checkStoreTarget : () => void 0;

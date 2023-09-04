@@ -1,19 +1,16 @@
-import { _UtilError } from "./helpers/error";
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
-import type {
-  CreateStoreType,
-  DefaultStoreOptionsType,
-  StoreFunctionType,
-  StoreParamsType,
-  UserParamsType
-} from "./types";
+import type { CreateStoreType, StoreParamsType, UserParamsType } from "./types";
 import {
-  _checkStoreOptions,
+  getStoreType,
   _validateStore,
   assignObservableAndProxy,
   isSame,
   removeObservableAndProxy,
-  StoreController
+  StoreController,
+  _checkOnEvent,
+  _checkListenToEvent,
+  _checkStoreTarget,
+  checkReWriteStoreAndGetResult
 } from "./helpers/tools";
 import { GROUP_STORE_EVENT, PRIVATE_STORE_EVENT } from "./constants/internal";
 
@@ -33,6 +30,7 @@ class Store {
     this.init = this.init.bind(this);
     this.separateActionsAndData = this.separateActionsAndData.bind(this);
   }
+
   get storeController() {
     return this._storeController;
   }
@@ -142,87 +140,77 @@ class Store {
   }
 }
 
-function createStore<S, O extends DefaultStoreOptionsType>(
-  store: S,
-  storeOptions: O
-): CreateStoreType<S, O>;
-function createStore<S, O extends DefaultStoreOptionsType>(
-  store: S,
-  storeOptions?: O
-): StoreFunctionType<S, O>;
+function attachEvent(store: any, storeParams: StoreParamsType) {
+  const { storeController } = storeParams;
+  store.on = function (event: string, callback: any) {
+    _checkOnEvent(event);
+    const { event: EVENT, paths } = getEventAndPath(storeParams);
+    return storeController.subscribe(EVENT, () => {
+      callback(getData({ paths }, storeParams));
+    });
+  };
+  store.listenTo = function (event: string, callback: any) {
+    _checkListenToEvent(event, callback, storeParams);
+    const { event: EVENT, paths } = getEventAndPath(storeParams, event);
+    return storeController.subscribe(EVENT, () => {
+      callback(getData({ paths, target: event }, storeParams));
+    });
+  };
+  return store;
+}
 
-function createStore(store: any, storeOptions: any) {
-  _checkStoreOptions(storeOptions);
+function createSyncStore(storeParams: StoreParamsType) {
+  function useSynStore(target?: string) {
+    _checkStoreTarget(target);
+    return useStore({ target }, storeParams);
+  }
+
+  useSynStore.dispatcher = storeParams.store.actions;
+
+  return attachEvent(useSynStore, storeParams);
+}
+
+function getEventAndPath(storeParams: StoreParamsType, target?: string) {
+  const paths = target ? target.split(".") : [];
+  const EVENT =
+    storeParams.storeType === "group"
+      ? paths[0] ?? GROUP_STORE_EVENT
+      : PRIVATE_STORE_EVENT;
+  return {
+    event: EVENT,
+    paths
+  };
+}
+
+function createStore<S>(store: S): CreateStoreType<S> {
+  const storeType = getStoreType(store);
   const appStore = new Store();
-  if (storeOptions && storeOptions.storeType === "group") {
+  if (storeType === "group") {
     _validateStore(store);
     appStore.init(store);
-    const useGroupStore = (target?: string, willDefineLater = false) => {
-      if (process.env.NODE_ENV !== "production" && target === "") {
-        throw _UtilError({
-          name: `Connecting to ${target}`,
-          message: `Target is optional. But it need to be valid if passed. Actual value is empty, fix it or remove it`
-        });
-      }
-      return useStore(
-        { target, willDefineLater },
-        {
-          storeType: "group",
-          store: {
-            store: appStore.store,
-            actions: appStore.actions
-          },
-          storeController: appStore.storeController
-        }
-      );
-    };
-
-    if (storeOptions && storeOptions.dispatchMode === "everywhere") {
-      return {
-        dispatcher: appStore.actions,
-        useStore: useGroupStore
-      };
-    }
-    return useGroupStore;
+    return createSyncStore({
+      storeType: "group",
+      store: {
+        store: appStore.store,
+        actions: appStore.actions
+      },
+      storeController: appStore.storeController
+    });
   }
-
   appStore.initPrivate(store);
-
-  const useSliceStore = (target?: string, willDefineLater = false) => {
-    if (process.env.NODE_ENV !== "production" && target === "") {
-      throw _UtilError({
-        name: `Connecting to ${target}`,
-        message: `Target is optional. But it need to be valid if passed. Actual value is empty, fix it or remove it`
-      });
-    }
-    return useStore(
-      { target, willDefineLater },
-      {
-        storeType: "slice",
-        store: {
-          store: appStore.privateStore,
-          actions: appStore.privateStoreActions
-        },
-        storeController: appStore.storeController
-      }
-    );
-  };
-
-  if (storeOptions && storeOptions.dispatchMode === "everywhere") {
-    console.log("here");
-    return {
-      dispatcher: appStore.privateStoreActions,
-      useStore: useSliceStore
-    };
-  }
-  return useSliceStore;
+  return createSyncStore({
+    storeType: "slice",
+    store: {
+      store: appStore.privateStore,
+      actions: appStore.privateStoreActions
+    },
+    storeController: appStore.storeController
+  });
 }
 
 function getData(userParams: UserParamsType, storeParams: StoreParamsType) {
-  const { paths, target, willDefineLater = false } = userParams;
+  const { paths, target } = userParams;
   const { store, storeType } = storeParams;
-
-  let result: any = {};
 
   const storeKey = paths[0];
 
@@ -242,36 +230,9 @@ function getData(userParams: UserParamsType, storeParams: StoreParamsType) {
     return removeObservableAndProxy(store.store[storeKey]);
   }
 
-  if (storeType === "slice") {
-    result = {
-      ...store.store,
-      ...store.actions
-    };
-  } else {
-    for (const key in store.store) {
-      result[key] = {
-        ...store.store[key],
-        ...store.actions[key]
-      };
-    }
-  }
-
-  paths.forEach((p) => {
-    if (
-      process.env.NODE_ENV !== "production" &&
-      !willDefineLater &&
-      result &&
-      typeof result[p] === "undefined"
-    ) {
-      throw _UtilError({
-        name: `Connecting to ${target}`,
-        message: `${p} is undefined in the store. If it will be available later, just pass willDefineLater true as second param of useStore('',true). Use with caution`
-      });
-    }
-    result = result ? result[p] : undefined;
-  });
-
-  return removeObservableAndProxy(result);
+  return removeObservableAndProxy(
+    checkReWriteStoreAndGetResult(storeParams, target)
+  );
 }
 
 function useStore(
@@ -282,12 +243,8 @@ function useStore(
   const { storeType, storeController } = storeParams;
 
   const [paths, memoizedState, EVENT] = useMemo(() => {
-    const paths = target ? target.split(".") : [];
-    const EVENT =
-      storeType === "group"
-        ? paths[0] ?? GROUP_STORE_EVENT
-        : PRIVATE_STORE_EVENT;
-    return [paths, getData({ paths, ...userParams }, storeParams), EVENT];
+    const { paths, event } = getEventAndPath(storeParams, target);
+    return [paths, getData({ paths, ...userParams }, storeParams), event];
   }, [target]);
 
   /*
