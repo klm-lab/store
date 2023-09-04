@@ -1,6 +1,6 @@
 {
   "name": "@klm-lab/store",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "description": "State management",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
