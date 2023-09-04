@@ -609,6 +609,16 @@ myStore.listenTo('data.someAction',(action) => {
 })
 ```
 
+All event listener return an unsubscribe function
+```js
+const unsubscribe = myStore.listenTo('data.someAction',(action) => {
+  // do what ever you want with your action,
+  // you can also dispatch
+})
+
+unsubscribe()
+```
+
 ## Available tools and options
 
 * `createStore` Let you create a store by passing a slice or a group of data and actions.
