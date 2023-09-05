@@ -447,7 +447,7 @@ export function warnProdNodeENV() {
     !["development", "production"].includes(process?.env?.NODE_ENV as string)
   ) {
     console.warn(
-      `@klm-lab/store \n process.env.NODE_ENV is not exposed. Make sure to expose it with production value to be able to get the smallest and fastest version of @klm-lab/store on production build`
+      `@klm-lab/store \n NODE_ENV is not exposed as environment variable. Make sure to expose it with production value to be able to get the smallest and fastest version of @klm-lab/store on production build`
     );
   }
 }
