@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { CreateStoreType, StoreParamsType, UserParamsType } from "./types";
 import {
   getStoreType,
