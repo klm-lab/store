@@ -100,7 +100,7 @@ export const useExpStore = createStore({
 });
 
 ```
-As you see, data and actions are mixed together and unordered. It is not a problem il will work 😀
+As you see, data and actions are mixed together and unordered. It is not a problem it will work 😀
 
 #### Create an organised data store
 
@@ -161,7 +161,7 @@ export const useExpStore = createStore({
 
 #### Use the store
 
-At this point your store is a hook and can only be used inside a React component in two ways.
+You can use it by two ways when using hook in react or by listen to <a href="#events">Events</a>
 
 * Get the store and extract the part you want.
 
@@ -217,17 +217,17 @@ has no impact on performance.
 
 ```js
 // Optimal way to extract 
-const updateExp = useExpStore("updateExp");
+const putOil = useCarStore("putOil");
 
 // or default way
 
-const { updateExp } = useExpStore()
+const { putOil } = useCarStore()
 
 // And use it like this
 
-updateExp() // or 
+putOil() // or 
 
-updateExp().otherActions().updateExp() //and so on. depends on what you want
+putOil().takePassengers().drive() //and so on. depends on what you want
 ```
 
 Both have no impact on performance. Component that only extract action will never rerender if some data change. It is just a dispatcher. But if the same component extract also some data like this
@@ -576,8 +576,8 @@ GroupGlobalDispatcher.yourGroupKey.action().action(); //  and so on
 
 ## Events
 
-You can listen to certain store events that allow you to receive updates without rendering your component.
-Very useful when you want to update your user interface stateless. We all hate unnecessary rendering 😀.
+You can listen to certain store events that allow you to receive updates without rendering your component. Or if you are not using react.
+Very useful when you want to update something stateless. We all hate unnecessary rendering 😀.
 
 * Listen to `change` event. <br/>
 **change** is available for both group and slice stores. But keep this in mind. You will receive an update for all changes in the store,
