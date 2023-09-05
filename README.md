@@ -6,7 +6,7 @@
 </div>
 
 # @klm-lab/store
-State management for any react application. It's small, fast and stable, no boilerplate, no side effects, no context provider. It embraces the power of hooks and lets you dispatch actions from anywhere. Comes with zero dependencies powered with typescript with strong and deep intellisense support.
+State management for any javascript application. It's small, fast and stable, no boilerplate, no side effects, no context provider. It embraces the power of hooks when using with react and lets you dispatch actions from anywhere. Comes with zero dependencies powered with typescript with strong and deep intellisense support.
 Typescript user or Javascript user, it doesn't matter. It is all for you.<br/>
 
 <a align="center" href="https://codesandbox.io/s/store-demo-2lkdw4" target="_blank">View demo</a>   
