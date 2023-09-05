@@ -619,6 +619,24 @@ const unsubscribe = myStore.listenTo('data.someAction',(action) => {
 unsubscribe()
 ```
 
+## Environment
+
+Skip this step if you are using event listener. Even listener are free from HOOK
+* **Client side** <br>
+You have nothing to do. It works like charm.
+* **Server side** 
+  * REMIX APP <br>
+  You have nothing to do, It works like charm.
+  * NEXT-JS APP<br>
+  Add `use client` on component that connect to the store using hook
+  ```js
+  "use client"
+  import .....
+  
+  const myData = useMyStore();
+  ```
+  * For other server side rendering framework, Feel free to open an issue if something happens. I will do my best to help you.
+
 ## Available tools and options
 
 * `createStore` Let you create a store by passing a slice or a group of data and actions.

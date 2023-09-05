@@ -440,6 +440,18 @@ function checkListenToEvent(
   }
 }
 
+export function warnProdNodeENV() {
+  if (
+    typeof window !== "undefined" &&
+    "process" in window &&
+    !["development", "production"].includes(process?.env?.NODE_ENV as string)
+  ) {
+    console.warn(
+      `@klm-lab/store \n process.env.NODE_ENV is not exposed. Make sure to expose it with production value to be able to get the smallest and fastest version of @klm-lab/store on production build`
+    );
+  }
+}
+
 export const _validateStore =
   process.env.NODE_ENV !== "production" ? validateStore : () => void 0;
 
@@ -451,3 +463,5 @@ export const _checkListenToEvent =
 
 export const _checkStoreTarget =
   process.env.NODE_ENV !== "production" ? checkStoreTarget : () => void 0;
+export const _warnProdNodeENV =
+  process.env.NODE_ENV !== "production" ? warnProdNodeENV : () => void 0;

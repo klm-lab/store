@@ -10,7 +10,8 @@ import {
   _checkOnEvent,
   _checkListenToEvent,
   _checkStoreTarget,
-  checkReWriteStoreAndGetResult
+  checkReWriteStoreAndGetResult,
+  _warnProdNodeENV
 } from "./helpers/tools";
 import { GROUP_STORE_EVENT, PRIVATE_STORE_EVENT } from "./constants/internal";
 
@@ -183,7 +184,7 @@ function getEventAndPath(storeParams: StoreParamsType, target?: string) {
 }
 
 function createStore<S>(store: S): CreateStoreType<S> {
-  warnNodeENV();
+  _warnProdNodeENV();
   const storeType = getStoreType(store);
   const appStore = new Store();
   if (storeType === "group") {
@@ -234,18 +235,6 @@ function getData(userParams: UserParamsType, storeParams: StoreParamsType) {
   return removeObservableAndProxy(
     checkReWriteStoreAndGetResult(storeParams, target)
   );
-}
-
-function warnNodeENV() {
-  if (
-    !["development", "production"].includes(process?.env?.NODE_ENV as string)
-  ) {
-    console.warn(
-      "@klm-lab/store",
-      "process.env.NODE_ENV is not exposed. Make sure to expose it with 'production' value to be able to get the smallest and fastest" +
-        " version of @klm-lab/store on production build"
-    );
-  }
 }
 
 function useStore(
