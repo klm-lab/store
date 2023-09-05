@@ -577,7 +577,7 @@ GroupGlobalDispatcher.yourGroupKey.action().action(); //  and so on
 ## Events
 
 You can listen to certain store events that allow you to receive updates without rendering your component.
-Very useful when you want to update your user interface stateless. We all hate necessary rendering 😀.
+Very useful when you want to update your user interface stateless. We all hate unnecessary rendering 😀.
 
 * Listen to `change` event. <br/>
 **change** is available for both group and slice stores. But keep this in mind. You will receive an update for all changes in the store,
