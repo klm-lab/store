@@ -1,5 +1,5 @@
 {
-  "name": "d-store",
+  "name": "aio-store",
   "version": "2.2.0",
   "description": "A javascript app state management",
   "keywords": [
