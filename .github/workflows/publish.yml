@@ -30,7 +30,7 @@ jobs:
       - name: "lint prettier and build"
         run: "npm run build"
       - name: "publish"
-        run: "npm publish --access public"
+        run: "cd lib && npm publish --access public"
         env:
           NODE_AUTH_TOKEN: '${{ secrets.NPM_STORE_AUTH_TOKEN }}'
 

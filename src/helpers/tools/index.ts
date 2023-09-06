@@ -3,46 +3,15 @@ import {
   GROUP_STORE_EVENT,
   PRIVATE_STORE_EVENT
 } from "../../constants/internal";
-import { StoreParamsType, StoreType } from "../../types";
-
-export class StoreController {
-  readonly #events: any;
-
-  constructor() {
-    this.#events = {};
-  }
-
-  subscribe(event: string, listener: any) {
-    if (!(event in this.#events)) {
-      this.#events[event] = new Set();
-    }
-    this.#events[event].add(listener);
-    return () => this.unsubscribe(event, listener);
-  }
-
-  unsubscribe(event: string, listener: any) {
-    if (event in this.#events) {
-      this.#events[event].delete(listener);
-    }
-  }
-
-  dispatch(event: string) {
-    /* We check if someone subscribe to group event and if current event is not privateEvent.
-     * If so, we call all group listener else, we do nothing
-     * */
-    if (GROUP_STORE_EVENT in this.#events && event !== PRIVATE_STORE_EVENT) {
-      this.#events[GROUP_STORE_EVENT].forEach((listener: any) => listener());
-    }
-
-    if (!(event in this.#events)) {
-      return;
-    }
-    /*
-     * We call the event listener
-     * */
-    this.#events[event].forEach((listener: any) => listener());
-  }
-}
+import type { StoreParamsType, StoreType, UserParamsType } from "../../types";
+import { Store, StoreController } from "../store";
+import {
+  _checkListenToEvent,
+  _checkOnEvent,
+  _validateStore,
+  _warnProdNodeENV,
+  checkReWriteStoreAndGetResult
+} from "../notAllProd";
 
 class ObservableMap extends Map {
   readonly #event: string;
@@ -229,25 +198,6 @@ export function removeObservableAndProxy(data: any) {
   return data;
 }
 
-function validateStore(store: any) {
-  if (store === null || store?.constructor?.name !== "Object") {
-    throw _UtilError({
-      name: `Creating store`,
-      message: `The store is not an object"`,
-      state: store
-    });
-  }
-  for (const storeKey in store) {
-    if (store[storeKey]?.constructor.name !== "Object") {
-      throw _UtilError({
-        name: `Creating store`,
-        message: `Property ${storeKey} is not an object. Any data + action give a slice. Any non object data without action give a slice. Any data without action give a group which required object as first entry.`,
-        state: store[storeKey]
-      });
-    }
-  }
-}
-
 export function getStoreType(store: any): StoreType {
   let storeType: string = "slice";
   if (typeof store === "undefined" || store === null) {
@@ -340,128 +290,90 @@ export function isSame(value1: any, value2: any): boolean {
   return Object.is(value1, value2);
 }
 
-function checkOnEvent(event: string) {
-  if (process.env.NODE_ENV !== "production" && event !== "change") {
-    throw _UtilError({
-      name: `Listen to event ${event}`,
-      message: `This listener is for change event. Pass event 'change' to be able to listen.`,
-      state: event
-    });
-  }
-}
-
-function checkStoreTarget(target?: string) {
-  if (
-    process.env.NODE_ENV !== "production" &&
-    (target === "" || typeof target !== "string")
-  ) {
-    throw _UtilError({
-      name: `Connecting to ${target}`,
-      message: `Target is optional. But it need to be valid if passed. Actual value is empty, fix it or remove it`
-    });
-  }
-}
-
-export function checkReWriteStoreAndGetResult(
-  storeParams: StoreParamsType,
-  target?: string
-) {
-  const PATHS = target ? target.split(".") : [];
-  const { store, storeType } = storeParams;
-  let result: any = {};
-  if (storeType === "slice") {
-    result = {
-      ...store.store,
-      ...store.actions
-    };
-  } else {
-    for (const key in store.store) {
-      result[key] = {
-        ...store.store[key],
-        ...store.actions[key]
-      };
-    }
-  }
-
-  PATHS.forEach((p) => {
-    if (
-      process.env.NODE_ENV !== "production" &&
-      result &&
-      typeof result[p] === "undefined"
-    ) {
-      throw _UtilError({
-        name: `Connecting to ${target}`,
-        message: `${p} is undefined in the store.`
-      });
-    }
-
-    result = result ? result[p] : undefined;
-  });
-  return result;
-}
-
-function checkListenToEvent(
-  event: string,
-  callback: any,
+export function getData(
+  userParams: UserParamsType,
   storeParams: StoreParamsType
 ) {
-  const { storeType } = storeParams;
-  if (
-    (process.env.NODE_ENV !== "production" &&
-      (typeof event as unknown) !== "string") ||
-    event === "" ||
-    event === null ||
-    event === undefined ||
-    typeof event === "undefined"
-  ) {
-    throw _UtilError({
-      name: `Listen to event ${event}`,
-      message: `Provide a valid event to be able to listen.`
-    });
+  const { paths, target } = userParams;
+  const { store, storeType } = storeParams;
+
+  const storeKey = paths[0];
+
+  if (storeKey === "_D" && storeType === "slice") {
+    return removeObservableAndProxy(store.store);
   }
 
-  const PATHS = event.split(".");
-  const storeKey = PATHS[0];
-  if (["_D", "_A"].includes(storeKey) && storeType === "slice") {
-    return;
+  if (storeKey === "_A" && storeType === "slice") {
+    return store.actions;
   }
 
-  if (["_D", "_A"].includes(PATHS[1]) && storeType === "group") {
-    return;
+  if (paths[1] === "_A") {
+    return store.actions[storeKey];
   }
 
-  checkReWriteStoreAndGetResult(storeParams, event);
-
-  if (typeof callback !== "function") {
-    throw _UtilError({
-      name: `Listen to event ${event}`,
-      message: `Provide a valid callback, a function to be able to listen.`
-    });
+  if (paths[1] === "_D") {
+    return removeObservableAndProxy(store.store[storeKey]);
   }
+
+  return removeObservableAndProxy(
+    checkReWriteStoreAndGetResult(storeParams, target)
+  );
 }
 
-export function warnProdNodeENV() {
-  if (
-    typeof window !== "undefined" &&
-    "process" in window &&
-    !["development", "production"].includes(process?.env?.NODE_ENV as string)
-  ) {
-    console.warn(
-      `@klm-lab/store \n NODE_ENV is not exposed as environment variable. Make sure to expose it with production value to be able to get the smallest and fastest version of @klm-lab/store on production build`
-    );
-  }
+export function getEventAndPath(storeParams: StoreParamsType, target?: string) {
+  const paths = target ? target.split(".") : [];
+  const EVENT =
+    storeParams.storeType === "group"
+      ? paths[0] ?? GROUP_STORE_EVENT
+      : PRIVATE_STORE_EVENT;
+  return {
+    event: EVENT,
+    paths
+  };
 }
 
-export const _validateStore =
-  process.env.NODE_ENV !== "production" ? validateStore : () => void 0;
+export function attachEvent(store: any, storeParams: StoreParamsType) {
+  const { storeController } = storeParams;
+  store.on = function (event: string, callback: any) {
+    _checkOnEvent(event);
+    const { event: EVENT, paths } = getEventAndPath(storeParams);
+    return storeController.subscribe(EVENT, () => {
+      callback(getData({ paths }, storeParams));
+    });
+  };
+  store.listenTo = function (event: string, callback: any) {
+    _checkListenToEvent(event, callback, storeParams);
+    const { event: EVENT, paths } = getEventAndPath(storeParams, event);
+    return storeController.subscribe(EVENT, () => {
+      callback(getData({ paths, target: event }, storeParams));
+    });
+  };
+  return store;
+}
 
-export const _checkOnEvent =
-  process.env.NODE_ENV !== "production" ? checkOnEvent : () => void 0;
-
-export const _checkListenToEvent =
-  process.env.NODE_ENV !== "production" ? checkListenToEvent : () => void 0;
-
-export const _checkStoreTarget =
-  process.env.NODE_ENV !== "production" ? checkStoreTarget : () => void 0;
-export const _warnProdNodeENV =
-  process.env.NODE_ENV !== "production" ? warnProdNodeENV : () => void 0;
+export function getNewStore<S>(store: S): StoreParamsType {
+  _warnProdNodeENV();
+  const storeType = getStoreType(store);
+  const appStore = new Store();
+  if (storeType === "group") {
+    _validateStore(store);
+    appStore.init(store);
+    return {
+      storeType: "group",
+      store: {
+        store: appStore.store,
+        actions: appStore.actions
+      },
+      storeController: appStore.storeController
+    };
+  }
+  appStore.initPrivate(store);
+  return {
+    storeType: "slice",
+    store: {
+      store: appStore.privateStore,
+      actions: appStore.privateStoreActions
+    },
+    storeController: appStore.storeController
+  };
+}

@@ -1,9 +1,29 @@
 {
-  "name": "@klm-lab/store",
-  "version": "2.0.3",
-  "description": "State management",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "name": "k-store",
+  "version": "2.2.0",
+  "description": "A javascript app state management",
+  "keywords": [
+    "react",
+    "store",
+    "proxy",
+    "state",
+    "management"
+  ],
+  "files": [
+    "./**"
+  ],
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./react": {
+      "types": "./react/index.d.ts",
+      "import": "./react/index.js",
+      "default": "./react/index.js"
+    }
+  },
   "scripts": {
     "build": "npm ci && npm run build:noci",
     "dev:noci": "npm run lint:prettier && npm run build:webpack && npm run build:dts",
@@ -11,11 +31,15 @@
     "lint:prettier": "npm run lint && npm run prettier",
     "build:dts": "dts-bundle-generator --config ./dts.json && npm run clean:temp",
     "build:webpack:dev": "webpack --config webpack.config.dev.js",
+    "build:webpack:dev:react": "webpack --config webpack.react.config.dev.js",
     "build:webpack:dev-w": "webpack --config webpack.config.dev.js -w",
+    "build:webpack:dev:react-w": "webpack --config webpack.react.config.dev.js -w",
     "build:webpack:prod": "webpack --config webpack.config.prod.js",
+    "build:webpack:prod:react": "webpack --config webpack.react.config.prod.js",
     "build:webpack:prod-w": "webpack --config webpack.config.prod.js -w",
-    "build:webpack": "npm run build:webpack:dev && npm run build:webpack:prod",
-    "start": "npm run clean && npm run lint && concurrently npm:build:webpack:dev-w npm:build:webpack:prod-w npm:build:dts",
+    "build:webpack:prod:react-w": "webpack --config webpack.react.config.prod.js -w",
+    "build:webpack": "npm run build:webpack:dev && npm run build:webpack:prod && npm run build:webpack:dev:react && npm run build:webpack:prod:react",
+    "start": "npm run clean && npm run lint && concurrently npm:build:webpack:dev-w npm:build:webpack:prod-w npm:build:webpack:dev:react-w npm:build:webpack:prod:react-w npm:build:dts",
     "prettier": "prettier ./src --write",
     "lint": "eslint ./src --ext .ts",
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -28,7 +52,8 @@
     "clean:lib:unix": "npm run clean:check:unix || rm -rf lib",
     "clean:temp:win": "npm run clean:check:win || , if exist temp rmdir /Q /S temp",
     "clean:temp:unix": "npm run clean:check:unix || rm -rf temp",
-    "size": "size-limit"
+    "size": "size-limit",
+    "npm:pack": "npm pack"
   },
   "repository": {
     "type": "git",
@@ -36,9 +61,6 @@
   },
   "author": "Arnaud Litaaba <litaabaarnaud@gmail.com>",
   "license": "MIT",
-  "files": [
-    "lib/**/*"
-  ],
   "private": false,
   "bugs": {
     "url": "https://github.com/klm-lab/store/issues"
@@ -64,9 +86,6 @@
     "webpack": "^5.88.2",
     "webpack-cli": "^5.1.4"
   },
-  "directories": {
-    "lib": "lib"
-  },
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
   },
@@ -78,19 +97,5 @@
         "react"
       ]
     }
-  ],
-  "exports": {
-    ".": {
-      "types": "./lib/index.d.ts",
-      "import": "./lib/index.js",
-      "default": "./lib/index.js"
-    }
-  },
-  "keywords": [
-    "react",
-    "store",
-    "proxy",
-    "state",
-    "state management"
   ]
 }

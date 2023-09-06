@@ -5,8 +5,8 @@
 </a>
 </div>
 
-# @klm-lab/store
-State management for any javascript application. It's small, fast and stable, no boilerplate, no side effects, no context provider. It embraces the power of hooks when using with react and lets you dispatch actions from anywhere. Comes with zero dependencies powered with typescript with strong and deep intellisense support.
+# K-STORE
+State management for any javascript application. It's small, fast and stable, no boilerplate, no side effects, no context provider and compatible with SSR. Comes with zero dependencies and lets you dispatch actions from anywhere powered with typescript with strong and deep intellisense support.
 Typescript user or Javascript user, it doesn't matter. It is all for you.<br/>
 
 <a align="center" href="https://codesandbox.io/s/store-demo-2lkdw4" target="_blank">View demo</a>   
@@ -44,7 +44,7 @@ Typescript user or Javascript user, it doesn't matter. It is all for you.<br/>
 ## Installation
 
 ```sh
-  npm install @klm-lab/store
+  npm install k-store
   ```
 
 <!-- USAGE EXAMPLES -->
@@ -54,7 +54,11 @@ Typescript user or Javascript user, it doesn't matter. It is all for you.<br/>
 ##### First import createStore
 
 ```js
-import { createStore } from "@klm-lab/store";
+//Vanilla js
+import { createStore } from "k-store";
+
+// React user
+import { createStore } from "k-store/react";
 ```
 
 With that you can create two types of store.
@@ -161,9 +165,10 @@ export const useExpStore = createStore({
 
 #### Use the store
 
-You can use it by two ways when using hook in react or by listen to <a href="#events">Events</a>
+At this point, for react users, you can use it by two ways when using hook or by listen to <a href="#events">Events</a>.
+Let's get the store and extract the part we want.<br>
 
-* Get the store and extract the part you want.
+Vanilla users JUMP here <a href="#events">Events</a>
 
 ```js
 import { useExpStore } from "./store";
@@ -412,7 +417,7 @@ updateValue(params1, params2, otherParams)
 A group store is a group of multiple slice. To create it call the same api `createStore` like that
 
 ```js
-import { createStore } from "@klm-lab/store"
+import { createStore } from "k-store"
 
 // A group that contain modal and notification
 export const useGroupStore = createStore({
@@ -435,7 +440,9 @@ export const useGroupStore = createStore({
 ```
 
 To use it, just do the same thing as a slice. Since it is a group, it is not advised to extract the
-whole group unless you know what you are doing. Intellisense will be there to help you. No need to memoize your store
+whole group unless you know what you are doing. Intellisense will be there to help you. No need to memoize your store.<br>
+
+Vanilla users JUMP to <a href="#events">Events</a>
 
 ```js
 const MyComponent = () => {
@@ -580,7 +587,7 @@ You can listen to certain store events that allow you to receive updates without
 Very useful when you want to update something stateless. We all hate unnecessary rendering 😀.
 
 * Listen to `change` event. <br/>
-**change** is available for both group and slice stores. But keep this in mind. You will receive an update for all changes in the store,
+**change event** is available for both. Group and slice stores. But keep this in mind. You will receive an update for all changes in the store,
 ```js
 const myStore = createStore(...);
 
@@ -617,6 +624,34 @@ const unsubscribe = myStore.listenTo('data.someAction',(action) => {
 })
 
 unsubscribe()
+```
+
+And you can also listen to all Data or all actions
+```js
+// Listen to all Data changes
+myStore.listenTo('_D',(action) => {
+  // do some stuff with your data
+})
+
+// Listen to all Data changes
+myStore.listenTo('_A',(action) => {
+  // do what ever you want with your action,
+  // you can also dispatch
+})
+```
+
+Or if your store is a group. See create a group store  <a href="#group-store">HERE</a>
+```js
+// Listen to all Data changes
+myStore.listenTo('groupKey._D',(action) => {
+  // do some stuff with your data
+})
+
+// Listen to all Data changes
+myStore.listenTo('groupKey._A',(action) => {
+  // do what ever you want with your action,
+  // you can also dispatch
+})
 ```
 
 ## Environment

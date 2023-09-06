@@ -10,6 +10,13 @@
       "output": {
         "sortNodes": true
       }
+    },
+    {
+      "filePath": "./src/react/index.ts",
+      "outFile": "./lib/react/index.d.ts",
+      "output": {
+        "sortNodes": true
+      }
     }
   ]
 }

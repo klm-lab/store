@@ -1,4 +1,4 @@
-import { StoreController } from "../helpers/tools";
+import { StoreController } from "../helpers/store";
 /*We exclude other types from suggestions
  * if the key extends one of these below, we return key else
  * We check if next nested key (S[key] extends object), then we join
@@ -188,7 +188,7 @@ type StoreEvent = "change";
  * So we chain those actions. Remember in a group, rootStore keys can never be function. So same principe
  * we extract rootKey and chain nested ones
  * */
-type CreateStoreType<S> = {
+type ReactStoreType<S> = {
   dispatcher: GetStoreType<S> extends "slice"
     ? FunctionChainType<S>
     : {
@@ -218,6 +218,22 @@ type CreateStoreType<S> = {
       };
 };
 
+type VanillaStoreType<S> = {
+  dispatcher: GetStoreType<S> extends "slice"
+    ? FunctionChainType<S>
+    : {
+        [k in keyof S]: FunctionChainType<S[k]>;
+      };
+  on: (
+    event: StoreEvent,
+    callback: (store: FunctionChainType<S> & DataOnlyType<S>) => void
+  ) => void;
+  listenTo: <TargetKey>(
+    event: TargetKey extends TargetType<S> ? TargetKey : TargetType<S>,
+    callback: (data: StoreOutputType<S, TargetKey>) => void
+  ) => void;
+};
+
 type StoreDataAndActionsType = {
   store: any;
   actions: any;
@@ -245,7 +261,8 @@ type ErrorType = {
 };
 
 export type {
-  CreateStoreType,
+  ReactStoreType,
+  VanillaStoreType,
   StoreDataAndActionsType,
   UserParamsType,
   StoreParamsType,
