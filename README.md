@@ -5,7 +5,7 @@
 </a>
 </div>
 
-# D-STORE
+# AIO-STORE
 State management for any javascript application. It's small, fast and stable, no boilerplate, no side effects, no context provider and compatible with SSR. Comes with zero dependencies and lets you dispatch actions from anywhere powered with typescript with strong and deep intellisense support.
 Typescript user or Javascript user, it doesn't matter. It is all for you.<br/>
 
@@ -44,7 +44,7 @@ Typescript user or Javascript user, it doesn't matter. It is all for you.<br/>
 ## Installation
 
 ```sh
-  npm install d-store
+  npm install aio-store
   ```
 
 <!-- USAGE EXAMPLES -->
@@ -55,10 +55,10 @@ Typescript user or Javascript user, it doesn't matter. It is all for you.<br/>
 
 ```js
 //Vanilla js
-import { createStore } from "d-store";
+import { createStore } from "aio-store";
 
 // React user
-import { createStore } from "d-store/react";
+import { createStore } from "aio-store/react";
 ```
 
 With that you can create two types of store.
@@ -417,7 +417,7 @@ updateValue(params1, params2, otherParams)
 A group store is a group of multiple slice. To create it call the same api `createStore` like that
 
 ```js
-import { createStore } from "d-store"
+import { createStore } from "aio-store"
 
 // A group that contain modal and notification
 export const useGroupStore = createStore({
