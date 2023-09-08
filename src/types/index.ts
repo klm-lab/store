@@ -182,13 +182,34 @@ type CustomSuggestionType<S, K> = K extends "_A"
 type StoreEvent = "change";
 
 /*
- * CreateStoreType. combine a dispatcher and the store as function
- * can be used like, myStore() or myStore.dispatcher
+ * StoreType. combine a dispatcher and the store as function.
+ * Can be used like, myStore() or myStore.dispatcher
  * The external dispatcher is returned, it will only contain actions.
  * So we chain those actions. Remember in a group, rootStore keys can never be function. So same principe
  * we extract rootKey and chain nested ones
  * */
-type ReactStoreType<S> = {
+type Store<S> = {
+  getActions: () => GetStoreType<S> extends "slice"
+    ? // Slice store,we rewrite Function and merge data
+      FunctionChainType<S>
+    : // Group store, we extract first key then rewrite S[key] Function and merge S[key] data
+      {
+        [k in keyof S]: FunctionChainType<S[k]>;
+      };
+  getSnapshot: () => GetStoreType<S> extends "slice"
+    ? // Slice store,we rewrite Function and merge data
+      FunctionChainType<S> & DataOnlyType<S>
+    : // Group store, we extract first key then rewrite S[key] Function and merge S[key] data
+      {
+        [k in keyof S]: FunctionChainType<S[k]> & DataOnlyType<S[k]>;
+      };
+  getDataSnapshot: () => GetStoreType<S> extends "slice"
+    ? // Slice store,we rewrite Function and merge data
+      DataOnlyType<S>
+    : // Group store, we extract first key then rewrite S[key] Function and merge S[key] data
+      {
+        [k in keyof S]: DataOnlyType<S[k]>;
+      };
   dispatcher: GetStoreType<S> extends "slice"
     ? FunctionChainType<S>
     : {
@@ -218,22 +239,6 @@ type ReactStoreType<S> = {
       };
 };
 
-type VanillaStoreType<S> = {
-  dispatcher: GetStoreType<S> extends "slice"
-    ? FunctionChainType<S>
-    : {
-        [k in keyof S]: FunctionChainType<S[k]>;
-      };
-  on: (
-    event: StoreEvent,
-    callback: (store: FunctionChainType<S> & DataOnlyType<S>) => void
-  ) => void;
-  listenTo: <TargetKey>(
-    event: TargetKey extends TargetType<S> ? TargetKey : TargetType<S>,
-    callback: (data: StoreOutputType<S, TargetKey>) => void
-  ) => void;
-};
-
 type StoreDataAndActionsType = {
   store: any;
   actions: any;
@@ -261,8 +266,7 @@ type ErrorType = {
 };
 
 export type {
-  ReactStoreType,
-  VanillaStoreType,
+  Store,
   StoreDataAndActionsType,
   UserParamsType,
   StoreParamsType,

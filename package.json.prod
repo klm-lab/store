@@ -12,8 +12,18 @@
   "files": [
     "./**"
   ],
-  "main": "./lib/index.js",
-  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./react": {
+      "types": "./react/index.d.ts",
+      "import": "./react/index.js",
+      "default": "./react/index.js"
+    }
+  },
   "scripts": {
     "build": "npm ci && npm run build:noci",
     "dev:noci": "npm run lint:prettier && npm run build:webpack && npm run build:dts",

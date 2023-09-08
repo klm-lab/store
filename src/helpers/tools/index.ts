@@ -7,6 +7,7 @@ import type { StoreParamsType, StoreType, UserParamsType } from "../../types";
 import { Store, StoreController } from "../store";
 import {
   _checkListenToEvent,
+  _checkNull,
   _checkOnEvent,
   _validateStore,
   _warnProdNodeENV,
@@ -292,7 +293,8 @@ export function isSame(value1: any, value2: any): boolean {
 
 export function getData(
   userParams: UserParamsType,
-  storeParams: StoreParamsType
+  storeParams: StoreParamsType,
+  isSnapShot = false
 ) {
   const { paths, target } = userParams;
   const { store, storeType } = storeParams;
@@ -308,11 +310,13 @@ export function getData(
   }
 
   if (paths[1] === "_A") {
-    return store.actions[storeKey];
+    return isSnapShot ? store.actions : store.actions[storeKey];
   }
 
   if (paths[1] === "_D") {
-    return removeObservableAndProxy(store.store[storeKey]);
+    return isSnapShot
+      ? removeObservableAndProxy(store.store)
+      : removeObservableAndProxy(store.store[storeKey]);
   }
 
   return removeObservableAndProxy(
@@ -349,6 +353,30 @@ export function attachEvent(store: any, storeParams: StoreParamsType) {
     });
   };
   return store;
+}
+export function attachSnapshotHandler(
+  store: any,
+  storeParams: StoreParamsType
+) {
+  store.getActions = function (event?: string) {
+    _checkNull(event);
+    const paths = storeParams.storeType === "group" ? ["", "_A"] : ["_A"];
+    return getData({ paths }, storeParams, true);
+  };
+  store.getDataSnapshot = function (event?: string) {
+    _checkNull(event);
+    const paths = storeParams.storeType === "group" ? ["", "_D"] : ["_D"];
+    return getData({ paths }, storeParams, true);
+  };
+  store.getSnapshot = function (event?: string) {
+    _checkNull(event);
+    return getData({ paths: [] }, storeParams, true);
+  };
+  return store;
+}
+
+export function finalizeStore(store: any, storeParams: StoreParamsType) {
+  return attachEvent(attachSnapshotHandler(store, storeParams), storeParams);
 }
 
 export function getNewStore<S>(store: S): StoreParamsType {

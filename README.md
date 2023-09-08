@@ -1,7 +1,7 @@
 <br />
 <div align="center">
 <a href="https://github.com/klm-lab/store/#readme" target="_blank">
-     <img src="https://www.svgrepo.com/download/281999/server-database.svg" alt="icon" width="120" height="120">
+     <img src="assets/icon.svg" alt="icon" width="120" height="120">
 </a>
 </div>
 
@@ -595,14 +595,57 @@ myStore.on('change',(store) => {
   // do whatever you want,
 })
 ```
-The store you have received contains everything you need to consume or dispatch data.
+The store your callback received contains everything you need to consume or dispatch data.
 
-* Listen to specific event. Every key in your store is an event, except for the actions, which are a little different.
+* Listen to specific event. Every key in your store is an event
 ```js
 const myStore = createStore(...);
 
 myStore.listenTo('data.content.value',(data) => {
   // do what ever you want with your data,
+})
+```
+
+When listen to a specific part of your store, you can get a snapshot of your store. <br>
+#### Vanilla user
+```js
+const myStore = createStore(...);
+
+// Listen to value changes
+myStore.listenTo('data.content.value',(value) => {
+  // Get a snapshot
+  const snapshot = myStore();
+  console.log(snapshot.data.otherData)
+  //or
+  snapshot.action().otherActions()
+})
+```
+
+Get a specific part
+```js
+ const snapshot = myStore("specific.part");
+```
+
+Your can also do like React User. See below
+
+#### React user. 
+Since your store is a hook, you will get this error if you try to get a snapshot when using event listener <br>
+> [!WARNING]  
+> Hooks can only be called inside the body of a function component  ......
+
+So you can use a function `getSnapshot` to get a snapShot of your store<br>
+`getDataSnapshot` for data only <br>
+`getActions` for actions only
+
+```js
+const myStore = createStore(...);
+
+// Listen to value changes
+myStore.listenTo('data.content.value',(value) => {
+  // Get a snapshot or actions
+  const snapshot = myStore.getSnapshot();
+  const data = myStore.getDataSnapshot();
+  const actions = myStore.getActions();
 })
 ```
 

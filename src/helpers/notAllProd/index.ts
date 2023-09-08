@@ -36,6 +36,7 @@ export function checkReWriteStoreAndGetResult(
 
     result = result ? result[p] : undefined;
   });
+
   return result;
 }
 
@@ -57,6 +58,7 @@ function validateStore(store: any) {
     }
   }
 }
+
 function checkOnEvent(event: string) {
   if (process.env.NODE_ENV !== "production" && event !== "change") {
     throw _UtilError({
@@ -70,7 +72,8 @@ function checkOnEvent(event: string) {
 function checkStoreTarget(target?: string) {
   if (
     process.env.NODE_ENV !== "production" &&
-    (target === "" || typeof target !== "string")
+    typeof target !== "undefined" &&
+    (target === "" || (typeof target as unknown) !== "string")
   ) {
     throw _UtilError({
       name: `Connecting to ${target}`,
@@ -78,6 +81,17 @@ function checkStoreTarget(target?: string) {
     });
   }
 }
+
+function checkNull(target?: string) {
+  if (process.env.NODE_ENV !== "production" && typeof target !== "undefined") {
+    throw _UtilError({
+      name: `Snapshot getter`,
+      message: `No params are allowed here. Please remove it`,
+      state: target
+    });
+  }
+}
+
 function checkListenToEvent(
   event: string,
   callback: any,
@@ -129,6 +143,7 @@ export function warnProdNodeENV() {
     );
   }
 }
+
 export const _validateStore =
   process.env.NODE_ENV !== "production" ? validateStore : () => void 0;
 
@@ -140,5 +155,7 @@ export const _checkListenToEvent =
 
 export const _checkStoreTarget =
   process.env.NODE_ENV !== "production" ? checkStoreTarget : () => void 0;
+export const _checkNull =
+  process.env.NODE_ENV !== "production" ? checkNull : () => void 0;
 export const _warnProdNodeENV =
   process.env.NODE_ENV !== "production" ? warnProdNodeENV : () => void 0;

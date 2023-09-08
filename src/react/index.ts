@@ -1,24 +1,24 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
-import type { ReactStoreType, StoreParamsType, UserParamsType } from "../types";
+import type { Store, StoreParamsType, UserParamsType } from "../types";
 import {
-  attachEvent,
   getData,
   getEventAndPath,
   isSame,
-  getNewStore
+  getNewStore,
+  finalizeStore
 } from "../helpers/tools";
 import { _checkStoreTarget } from "../helpers/notAllProd";
 
-function createStore<S>(store: S): ReactStoreType<S> {
+function createStore<S>(store: S): Store<S> {
   const newStore = getNewStore(store);
 
-  function useSynStore(target?: string) {
+  function useSyncStore(target?: string) {
     _checkStoreTarget(target);
     return useStore({ target }, newStore);
   }
 
-  useSynStore.dispatcher = newStore.store.actions;
-  return attachEvent(useSynStore, newStore);
+  useSyncStore.dispatcher = newStore.store.actions;
+  return finalizeStore(useSyncStore, newStore);
 }
 
 function useStore(
