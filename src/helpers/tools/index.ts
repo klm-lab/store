@@ -3,7 +3,13 @@ import {
   GROUP_STORE_EVENT,
   PRIVATE_STORE_EVENT
 } from "../../constants/internal";
-import type { StoreParamsType, StoreType, UserParamsType } from "../../types";
+import type {
+  ChangeHandlerType,
+  InterceptOptionsType,
+  StoreParamsType,
+  StoreType,
+  UserParamsType
+} from "../../types";
 import { Store, StoreController } from "../store";
 import {
   _checkListenToEvent,
@@ -13,75 +19,9 @@ import {
   _warnProdNodeENV,
   checkReWriteStoreAndGetResult
 } from "../notAllProd";
+import { ObservableSet, ObservableMap } from "../observable";
 
-class ObservableMap extends Map {
-  readonly #event: string;
-  readonly #storeController: StoreController;
-
-  constructor(storeController: StoreController, event: string) {
-    super();
-    this.#event = event;
-    this.#storeController = storeController;
-  }
-
-  set(key: any, value: any) {
-    if (super.get(key) !== value) {
-      const result = super.set(
-        key,
-        assignObservableAndProxy(value, this.#event, this.#storeController)
-      );
-      dispatchEvent(this.#event, this.#storeController);
-      return result;
-    }
-    return this;
-  }
-
-  clear() {
-    super.clear();
-    dispatchEvent(this.#event, this.#storeController);
-  }
-
-  delete(key: any) {
-    const result = super.delete(key);
-    dispatchEvent(this.#event, this.#storeController);
-    return result;
-  }
-}
-
-class ObservableSet extends Set {
-  readonly #event: string;
-  readonly #storeController: StoreController;
-
-  constructor(storeController: StoreController, event: string) {
-    super();
-    this.#event = event;
-    this.#storeController = storeController;
-  }
-
-  add(value: any) {
-    if (!super.has(value)) {
-      const result = super.add(
-        assignObservableAndProxy(value, this.#event, this.#storeController)
-      );
-      dispatchEvent(this.#event, this.#storeController);
-      return result;
-    }
-    return this;
-  }
-
-  clear() {
-    super.clear();
-    dispatchEvent(this.#event, this.#storeController);
-  }
-
-  delete(key: any) {
-    const result = super.delete(key);
-    dispatchEvent(this.#event, this.#storeController);
-    return result;
-  }
-}
-
-function dispatchEvent(event: string, storeController: StoreController) {
+export function dispatchEvent(event: string, storeController: StoreController) {
   /* We check if current event is not privateEvent.
    * If so, we call all group listener else, we do nothing
    * */
@@ -94,18 +34,79 @@ function dispatchEvent(event: string, storeController: StoreController) {
   storeController && storeController.dispatch(event);
 }
 
+function handleChanges(
+  params: ChangeHandlerType,
+  storeController: StoreController
+) {
+  const { event, state, key, value, action } = params;
+  let options = {} as InterceptOptionsType;
+  if (params.action === "update") {
+    options = {
+      value,
+      key,
+      state: removeObservableAndProxy(state),
+      action: action,
+      overrideKey: (newKey: any) => {
+        state[newKey] = assignObservableAndProxy(value, event, storeController);
+        dispatchEvent(event, storeController);
+      },
+      allowAction: (validatedValue: any) => {
+        state[key] = assignObservableAndProxy(
+          validatedValue,
+          event,
+          storeController
+        );
+        dispatchEvent(event, storeController);
+      },
+      overrideKeyAndValue: (newKey: any, validatedValue: any) => {
+        state[newKey] = assignObservableAndProxy(
+          validatedValue,
+          event,
+          storeController
+        );
+        dispatchEvent(event, storeController);
+      }
+    };
+  }
+  if (params.action === "delete") {
+    options = {
+      value,
+      key,
+      state: removeObservableAndProxy(state),
+      action: action,
+      overrideKey: (newKey: any) => {
+        delete state[newKey];
+        dispatchEvent(event, storeController);
+      },
+      allowAction: () => {
+        delete state[key];
+        dispatchEvent(event, storeController);
+      },
+      overrideKeyAndValue: (newKey: any) => {
+        delete state[newKey];
+        dispatchEvent(event, storeController);
+      }
+    };
+  }
+  storeController.handleDispatch(event, options);
+}
+
 function createProxyValidator(event: string, storeController: StoreController) {
   return {
     set: function (state: any, key: any, value: any) {
       if (!isSame(state[key], value)) {
-        state[key] = assignObservableAndProxy(value, event, storeController);
-        dispatchEvent(event, storeController);
+        handleChanges(
+          { event, state, key, value, action: "update" },
+          storeController
+        );
       }
       return true;
     },
     deleteProperty: (target: any, prop: any) => {
-      delete target[prop];
-      dispatchEvent(event, storeController);
+      handleChanges(
+        { event, state: target, key: prop, value: null, action: "delete" },
+        storeController
+      );
       return true;
     }
   };
@@ -137,6 +138,7 @@ function handleObservable(
       );
     }
   });
+  element.finishInit && element.finishInit();
   return element;
 }
 
@@ -151,7 +153,7 @@ export function assignObservableAndProxy(
   if (data && data.constructor.name === "Map") {
     return handleObservable(
       data,
-      new ObservableMap(storeController, event),
+      new ObservableMap(storeController, event, true),
       "Map",
       event,
       storeController
@@ -160,7 +162,7 @@ export function assignObservableAndProxy(
   if (data && data.constructor.name === "Set") {
     return handleObservable(
       data,
-      new ObservableSet(storeController, event),
+      new ObservableSet(storeController, event, true),
       "Set",
       event,
       storeController
@@ -352,8 +354,14 @@ export function attachEvent(store: any, storeParams: StoreParamsType) {
       callback(getData({ paths, target: event }, storeParams));
     });
   };
+  store.intercept = function (event: string, callback: any) {
+    _checkListenToEvent(event, callback, storeParams);
+    const { event: EVENT } = getEventAndPath(storeParams, event);
+    return storeController.subscribe(EVENT + "_intercept", callback);
+  };
   return store;
 }
+
 export function attachSnapshotHandler(
   store: any,
   storeParams: StoreParamsType

@@ -3,6 +3,8 @@ import {
   GROUP_STORE_EVENT,
   PRIVATE_STORE_EVENT
 } from "../../constants/internal";
+import type { InterceptOptionsType } from "../../types";
+import { _UtilError } from "../error";
 
 class StoreController {
   readonly #events: any;
@@ -41,6 +43,71 @@ class StoreController {
      * */
     this.#events[event].forEach((listener: any) => listener());
   }
+
+  #canICall(options: InterceptOptionsType, name: string, key = false) {
+    if (process.env.NODE_ENV !== "production") {
+      if (key) {
+        if (["clearInSet", "clearInMap"].includes(options.action)) {
+          throw _UtilError({
+            name: `Override when action is ${options.action}`,
+            message: `Current action not allow you to call ${name}`
+          });
+        }
+        return;
+      }
+      if (
+        [
+          "delete",
+          "deleteInSet",
+          "deleteInMap",
+          "clearInSet",
+          "clearInMap"
+        ].includes(options.action)
+      ) {
+        throw _UtilError({
+          name: `Override when action is ${options.action}`,
+          message: `Current action not allow you to call ${name}`
+        });
+      }
+    }
+  }
+
+  handleDispatch(event: string, options: InterceptOptionsType) {
+    if (!(event + "_intercept" in this.#events)) {
+      return options.allowAction(options.value);
+    }
+    this.#events[event + "_intercept"].forEach((listener: any) =>
+      listener({
+        intercepted: {
+          value: options.value,
+          state: options.state,
+          key: options.key,
+          action: options.action
+        },
+        allowAction: () => {
+          options.allowAction(options.value);
+        },
+        override: {
+          value: (value?: any) => {
+            this.#canICall(options, "override.value");
+            options.allowAction(value ?? options.value);
+          },
+          key: (key?: any) => {
+            this.#canICall(options, "override.key", true);
+            options.overrideKey(key ?? options.key);
+          },
+          keyAndValue: (key?: any, value?: any) => {
+            this.#canICall(options, "override.keyAndValue", true);
+            options.overrideKeyAndValue(
+              key ?? options.key,
+              value ?? options.value
+            );
+          }
+        },
+        rejectAction: () => void 0
+      })
+    );
+  }
 }
 
 class Store {
@@ -57,7 +124,7 @@ class Store {
     this._privateStoreActions = {};
     this._actionsStore = {};
     this.init = this.init.bind(this);
-    this.separateActionsAndData = this.separateActionsAndData.bind(this);
+    this.initPrivate = this.initPrivate.bind(this);
   }
 
   get storeController() {
@@ -80,7 +147,7 @@ class Store {
     return this._actionsStore;
   }
 
-  private separateActionsAndData(slice: any) {
+  #separateActionsAndData(slice: any) {
     const store: any = {};
     const actions: any = {};
     // we loop through slice (test) and separate data and actions
@@ -97,6 +164,9 @@ class Store {
   }
 
   init(userStore: any) {
+    this.#groupInit(userStore);
+  }
+  #groupInit(userStore: any) {
     for (const userStoreKey in userStore) {
       // we get a slice ex: we get test from {test: any, other: any}
       const slice = userStore[userStoreKey];
@@ -104,7 +174,7 @@ class Store {
        * Because, data not followed a passing rules. We need
        * to separate actions from data first
        * */
-      const { store, actions } = this.separateActionsAndData(slice);
+      const { store, actions } = this.#separateActionsAndData(slice);
       this._store[userStoreKey] = store;
       this._actionsStore[userStoreKey] = actions;
 
@@ -138,11 +208,14 @@ class Store {
   }
 
   initPrivate(params: any) {
+    this.#sliceInit(params);
+  }
+  #sliceInit(params: any) {
     /*
      * Because, data not followed a passing rules. We need
      * to separate actions from data first
      * */
-    const { store, actions } = this.separateActionsAndData(params);
+    const { store, actions } = this.#separateActionsAndData(params);
     this._privateStore = store;
     this._privateStoreActions = actions;
 

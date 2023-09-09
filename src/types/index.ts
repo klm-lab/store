@@ -180,6 +180,50 @@ type CustomSuggestionType<S, K> = K extends "_A"
   : never;
 
 type StoreEvent = "change";
+type InterceptActionType =
+  | "update"
+  | "delete"
+  | "deleteInSet"
+  | "deleteInMap"
+  | "clearInSet"
+  | "clearInMap"
+  | "addInSet"
+  | "setInMap";
+
+interface OverrideType {
+  value(value: any): void;
+  key(key: any): void;
+  keyAndValue(key: any, value: any): void;
+}
+
+interface InterceptDataType<S, TargetKey> {
+  intercepted: {
+    key: any;
+    value: any;
+    state: StoreOutputType<S, TargetKey>;
+  };
+  allowAction(): void;
+  rejectAction(): void;
+  override: OverrideType;
+}
+
+type ChangeHandlerType = {
+  event: string;
+  state: any;
+  key: any;
+  value: any;
+  action: InterceptActionType;
+};
+
+type InterceptOptionsType = {
+  value: any;
+  state: any;
+  key: any;
+  action: InterceptActionType;
+  allowAction: (value?: any) => void;
+  overrideKey: (key?: any) => void;
+  overrideKeyAndValue: (key?: any, value?: any) => void;
+};
 
 /*
  * StoreType. combine a dispatcher and the store as function.
@@ -189,6 +233,10 @@ type StoreEvent = "change";
  * we extract rootKey and chain nested ones
  * */
 type Store<S> = {
+  intercept: <TargetKey>(
+    event: TargetKey extends TargetType<S> ? TargetKey : TargetType<S>,
+    callback: (data: InterceptDataType<S, TargetKey>) => void
+  ) => void;
   getActions: () => GetStoreType<S> extends "slice"
     ? // Slice store,we rewrite Function and merge data
       FunctionChainType<S>
@@ -271,5 +319,8 @@ export type {
   UserParamsType,
   StoreParamsType,
   ErrorType,
-  StoreType
+  StoreType,
+  InterceptOptionsType,
+  InterceptActionType,
+  ChangeHandlerType
 };
