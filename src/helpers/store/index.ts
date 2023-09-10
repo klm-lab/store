@@ -1,8 +1,5 @@
 import { assignObservableAndProxy } from "../tools";
-import {
-  GROUP_STORE_EVENT,
-  PRIVATE_STORE_EVENT
-} from "../../constants/internal";
+import { PRIVATE_STORE_EVENT } from "../../constants/internal";
 import type { InterceptOptionsType } from "../../types";
 import { _UtilError } from "../error";
 
@@ -28,19 +25,9 @@ class StoreController {
   }
 
   dispatch(event: string) {
-    /* We check if someone subscribe to group event and if current event is not privateEvent.
-     * If so, we call all group listener else, we do nothing
-     * */
-    if (GROUP_STORE_EVENT in this.#events && event !== PRIVATE_STORE_EVENT) {
-      this.#events[GROUP_STORE_EVENT].forEach((listener: any) => listener());
-    }
-
     if (!(event in this.#events)) {
       return;
     }
-    /*
-     * We call the event listener
-     * */
     this.#events[event].forEach((listener: any) => listener());
   }
 
@@ -166,6 +153,7 @@ class Store {
   init(userStore: any) {
     this.#groupInit(userStore);
   }
+
   #groupInit(userStore: any) {
     for (const userStoreKey in userStore) {
       // we get a slice ex: we get test from {test: any, other: any}
@@ -210,6 +198,7 @@ class Store {
   initPrivate(params: any) {
     this.#sliceInit(params);
   }
+
   #sliceInit(params: any) {
     /*
      * Because, data not followed a passing rules. We need

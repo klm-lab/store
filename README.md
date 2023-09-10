@@ -597,7 +597,7 @@ myStore.on('change',(store) => {
 ```
 The store your callback received contains everything you need to consume or dispatch data.
 
-* Listen to specific event. Every key in your store is an event
+* Listen to specific change
 ```js
 const myStore = createStore(...);
 
@@ -606,7 +606,7 @@ myStore.listenTo('data.content.value',(data) => {
 })
 ```
 
-When listen to a specific part of your store, you can get a snapshot of your store. <br>
+When listen to a specific part of your store, you can get a snapshot of your store if needed. <br>
 #### Vanilla user
 ```js
 const myStore = createStore(...);

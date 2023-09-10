@@ -338,25 +338,42 @@ export function getEventAndPath(storeParams: StoreParamsType, target?: string) {
   };
 }
 
-export function attachEvent(store: any, storeParams: StoreParamsType) {
+function sendDataWithMemo(
+  event: string | undefined,
+  callback: any,
+  storeParams: StoreParamsType
+) {
   const { storeController } = storeParams;
+  const { event: EVENT, paths } = getEventAndPath(storeParams, event);
+  const userParams = event
+    ? {
+        paths,
+        target: event
+      }
+    : { paths };
+  let snapShot = getData(userParams, storeParams);
+  return storeController.subscribe(EVENT, () => {
+    const newData = getData(userParams, storeParams);
+    if (!isSame(snapShot, newData)) {
+      snapShot = newData;
+      callback(snapShot);
+    }
+  });
+}
+
+export function attachEvent(store: any, storeParams: StoreParamsType) {
   store.on = function (event: string, callback: any) {
     _checkOnEvent(event);
-    const { event: EVENT, paths } = getEventAndPath(storeParams);
-    return storeController.subscribe(EVENT, () => {
-      callback(getData({ paths }, storeParams));
-    });
+    return sendDataWithMemo(undefined, callback, storeParams);
   };
   store.listenTo = function (event: string, callback: any) {
     _checkListenToEvent(event, callback, storeParams);
-    const { event: EVENT, paths } = getEventAndPath(storeParams, event);
-    return storeController.subscribe(EVENT, () => {
-      callback(getData({ paths, target: event }, storeParams));
-    });
+    return sendDataWithMemo(event, callback, storeParams);
   };
   store.intercept = function (event: string, callback: any) {
     _checkListenToEvent(event, callback, storeParams);
     const { event: EVENT } = getEventAndPath(storeParams, event);
+    const { storeController } = storeParams;
     return storeController.subscribe(EVENT + "_intercept", callback);
   };
   return store;
