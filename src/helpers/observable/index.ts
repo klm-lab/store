@@ -29,7 +29,6 @@ class ObservableMap extends Map {
         key,
         assignObservableAndProxy(value, this.#event, this.#storeController)
       );
-      dispatchEvent(this.#event, this.#storeController);
       return this;
     }
     // Not in init mode
@@ -145,7 +144,6 @@ class ObservableSet extends Set {
       super.add(
         assignObservableAndProxy(value, this.#event, this.#storeController)
       );
-      dispatchEvent(this.#event, this.#storeController);
       return this;
     }
     if (!super.has(value)) {

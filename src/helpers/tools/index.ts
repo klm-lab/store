@@ -1,7 +1,10 @@
 import { _UtilError } from "../error";
 import {
+  GROUP,
   GROUP_STORE_EVENT,
-  PRIVATE_STORE_EVENT
+  INTERCEPT,
+  PRIVATE_STORE_EVENT,
+  SLICE
 } from "../../constants/internal";
 import type {
   ChangeHandlerType,
@@ -17,7 +20,8 @@ import {
   _checkOnEvent,
   _validateStore,
   _warnProdNodeENV,
-  checkReWriteStoreAndGetResult
+  checkReWriteStoreAndGetResult,
+  createPath
 } from "../notAllProd";
 import { ObservableSet, ObservableMap } from "../observable";
 
@@ -202,7 +206,7 @@ export function removeObservableAndProxy(data: any) {
 }
 
 export function getStoreType(store: any): StoreType {
-  let storeType: string = "slice";
+  let storeType: string = SLICE;
   if (typeof store === "undefined" || store === null) {
     throw _UtilError({
       name: `Creating store`,
@@ -224,10 +228,10 @@ export function getStoreType(store: any): StoreType {
       store[STORE_KEYS[i]] !== null &&
       store[STORE_KEYS[i]].constructor.name === "Object"
     ) {
-      storeType = "group";
+      storeType = GROUP;
     } else {
       if (typeof store[STORE_KEYS[i]] === "function") {
-        storeType = "slice";
+        storeType = SLICE;
         break;
       }
     }
@@ -303,11 +307,11 @@ export function getData(
 
   const storeKey = paths[0];
 
-  if (storeKey === "_D" && storeType === "slice") {
+  if (storeKey === "_D" && storeType === SLICE) {
     return removeObservableAndProxy(store.store);
   }
 
-  if (storeKey === "_A" && storeType === "slice") {
+  if (storeKey === "_A" && storeType === SLICE) {
     return store.actions;
   }
 
@@ -327,9 +331,9 @@ export function getData(
 }
 
 export function getEventAndPath(storeParams: StoreParamsType, target?: string) {
-  const paths = target ? target.split(".") : [];
+  const paths = createPath(target);
   const EVENT =
-    storeParams.storeType === "group"
+    storeParams.storeType === GROUP
       ? paths[0] ?? GROUP_STORE_EVENT
       : PRIVATE_STORE_EVENT;
   return {
@@ -338,26 +342,43 @@ export function getEventAndPath(storeParams: StoreParamsType, target?: string) {
   };
 }
 
-export function attachEvent(store: any, storeParams: StoreParamsType) {
+function sendDataWithMemo(
+  event: string | undefined,
+  callback: any,
+  storeParams: StoreParamsType
+) {
   const { storeController } = storeParams;
+  const { event: EVENT, paths } = getEventAndPath(storeParams, event);
+  const userParams = event
+    ? {
+        paths,
+        target: event
+      }
+    : { paths };
+  let snapShot = getData(userParams, storeParams);
+  return storeController.subscribe(EVENT, () => {
+    const newData = getData(userParams, storeParams);
+    if (!isSame(snapShot, newData)) {
+      snapShot = newData;
+      callback(snapShot);
+    }
+  });
+}
+
+export function attachEvent(store: any, storeParams: StoreParamsType) {
   store.on = function (event: string, callback: any) {
     _checkOnEvent(event);
-    const { event: EVENT, paths } = getEventAndPath(storeParams);
-    return storeController.subscribe(EVENT, () => {
-      callback(getData({ paths }, storeParams));
-    });
+    return sendDataWithMemo(undefined, callback, storeParams);
   };
   store.listenTo = function (event: string, callback: any) {
     _checkListenToEvent(event, callback, storeParams);
-    const { event: EVENT, paths } = getEventAndPath(storeParams, event);
-    return storeController.subscribe(EVENT, () => {
-      callback(getData({ paths, target: event }, storeParams));
-    });
+    return sendDataWithMemo(event, callback, storeParams);
   };
   store.intercept = function (event: string, callback: any) {
     _checkListenToEvent(event, callback, storeParams);
     const { event: EVENT } = getEventAndPath(storeParams, event);
-    return storeController.subscribe(EVENT + "_intercept", callback);
+    const { storeController } = storeParams;
+    return storeController.subscribe(EVENT + INTERCEPT, callback);
   };
   return store;
 }
@@ -368,12 +389,12 @@ export function attachSnapshotHandler(
 ) {
   store.getActions = function (event?: string) {
     _checkNull(event);
-    const paths = storeParams.storeType === "group" ? ["", "_A"] : ["_A"];
+    const paths = storeParams.storeType === GROUP ? ["", "_A"] : ["_A"];
     return getData({ paths }, storeParams, true);
   };
   store.getDataSnapshot = function (event?: string) {
     _checkNull(event);
-    const paths = storeParams.storeType === "group" ? ["", "_D"] : ["_D"];
+    const paths = storeParams.storeType === GROUP ? ["", "_D"] : ["_D"];
     return getData({ paths }, storeParams, true);
   };
   store.getSnapshot = function (event?: string) {
@@ -391,11 +412,11 @@ export function getNewStore<S>(store: S): StoreParamsType {
   _warnProdNodeENV();
   const storeType = getStoreType(store);
   const appStore = new Store();
-  if (storeType === "group") {
+  if (storeType === GROUP) {
     _validateStore(store);
     appStore.init(store);
     return {
-      storeType: "group",
+      storeType,
       store: {
         store: appStore.store,
         actions: appStore.actions
@@ -405,7 +426,7 @@ export function getNewStore<S>(store: S): StoreParamsType {
   }
   appStore.initPrivate(store);
   return {
-    storeType: "slice",
+    storeType,
     store: {
       store: appStore.privateStore,
       actions: appStore.privateStoreActions
