@@ -1,14 +1,18 @@
 import type { StoreParamsType } from "../../types";
 import { _UtilError } from "../error";
+import { GROUP, SLICE } from "../../constants/internal";
 
+export function createPath(target?: string) {
+  return target ? (target === "all" ? [] : target.split(".")) : [];
+}
 export function checkReWriteStoreAndGetResult(
   storeParams: StoreParamsType,
   target?: string
 ) {
-  const PATHS = target ? target.split(".") : [];
+  const paths = createPath(target);
   const { store, storeType } = storeParams;
   let result: any = {};
-  if (storeType === "slice") {
+  if (storeType === SLICE) {
     result = {
       ...store.store,
       ...store.actions
@@ -22,7 +26,7 @@ export function checkReWriteStoreAndGetResult(
     }
   }
 
-  PATHS.forEach((p) => {
+  paths.forEach((p) => {
     if (
       process.env.NODE_ENV !== "production" &&
       result &&
@@ -114,11 +118,11 @@ function checkListenToEvent(
 
   const PATHS = event.split(".");
   const storeKey = PATHS[0];
-  if (["_D", "_A"].includes(storeKey) && storeType === "slice") {
+  if (["_D", "_A"].includes(storeKey) && storeType === SLICE) {
     return;
   }
 
-  if (["_D", "_A"].includes(PATHS[1]) && storeType === "group") {
+  if (["_D", "_A"].includes(PATHS[1]) && storeType === GROUP) {
     return;
   }
 

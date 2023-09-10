@@ -1,5 +1,5 @@
 import { assignObservableAndProxy } from "../tools";
-import { PRIVATE_STORE_EVENT } from "../../constants/internal";
+import { INTERCEPT, PRIVATE_STORE_EVENT } from "../../constants/internal";
 import type { InterceptOptionsType } from "../../types";
 import { _UtilError } from "../error";
 
@@ -60,10 +60,11 @@ class StoreController {
   }
 
   handleDispatch(event: string, options: InterceptOptionsType) {
-    if (!(event + "_intercept" in this.#events)) {
+    const INTERCEPT_EVENT = event + INTERCEPT;
+    if (!(INTERCEPT_EVENT in this.#events)) {
       return options.allowAction(options.value);
     }
-    this.#events[event + "_intercept"].forEach((listener: any) =>
+    this.#events[INTERCEPT_EVENT].forEach((listener: any) =>
       listener({
         intercepted: {
           value: options.value,
@@ -159,14 +160,14 @@ class Store {
       // we get a slice ex: we get test from {test: any, other: any}
       const slice = userStore[userStoreKey];
       /*
-       * Because, data not followed a passing rules. We need
+       * Because, data didn't follow a passing rules. We need
        * to separate actions from data first
        * */
       const { store, actions } = this.#separateActionsAndData(slice);
       this._store[userStoreKey] = store;
       this._actionsStore[userStoreKey] = actions;
 
-      // We create proxy for every stored data
+      // We create a proxy for every stored data
       this._store[userStoreKey] = assignObservableAndProxy(
         this._store[userStoreKey],
         userStoreKey,
@@ -201,7 +202,7 @@ class Store {
 
   #sliceInit(params: any) {
     /*
-     * Because, data not followed a passing rules. We need
+     * Because, data didn't follow a passing rules. We need
      * to separate actions from data first
      * */
     const { store, actions } = this.#separateActionsAndData(params);

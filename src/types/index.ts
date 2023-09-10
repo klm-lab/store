@@ -37,8 +37,8 @@ type DataOrActionsKeyTypes<S> = {
  * _A is to type the result as chainable actions and _D as all data
  * */
 type TargetType<S> = GetStoreType<S> extends "group"
-  ? NestedKeyTypes<S> | DataOrActionsKeyTypes<S>
-  : NestedKeyTypes<S> | "_A" | "_D";
+  ? NestedKeyTypes<S> | DataOrActionsKeyTypes<S> | "all"
+  : NestedKeyTypes<S> | "_A" | "_D" | "all";
 
 /* Return list a key that are not function.
  * We cast the result as [keyof S] to
@@ -226,7 +226,7 @@ type InterceptOptionsType = {
 };
 
 /*
- * StoreType. combine a dispatcher and the store as function.
+ * StoreType. combine a dispatcher and the store as a function.
  * Can be used like, myStore() or myStore.dispatcher
  * The external dispatcher is returned, it will only contain actions.
  * So we chain those actions. Remember in a group, rootStore keys can never be function. So same principe
@@ -236,7 +236,7 @@ type Store<S> = {
   intercept: <TargetKey>(
     event: TargetKey extends TargetType<S> ? TargetKey : TargetType<S>,
     callback: (data: InterceptDataType<S, TargetKey>) => void
-  ) => void;
+  ) => () => void;
   getActions: () => GetStoreType<S> extends "slice"
     ? // Slice store,we rewrite Function and merge data
       FunctionChainType<S>
@@ -266,11 +266,11 @@ type Store<S> = {
   on: (
     event: StoreEvent,
     callback: (store: FunctionChainType<S> & DataOnlyType<S>) => void
-  ) => void;
+  ) => () => void;
   listenTo: <TargetKey>(
     event: TargetKey extends TargetType<S> ? TargetKey : TargetType<S>,
     callback: (data: StoreOutputType<S, TargetKey>) => void
-  ) => void;
+  ) => () => void;
   <TargetKey>(
     target?: TargetKey extends TargetType<S> ? TargetKey : TargetType<S>
     // check if target is passed, NonNullable help us by excluding null and undefined

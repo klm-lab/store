@@ -3,13 +3,15 @@
 <a href="https://github.com/klm-lab/store/#readme" target="_blank">
      <img src="assets/icon.svg" alt="icon" width="120" height="120">
 </a>
+<div>
+<a align="center" href="https://codesandbox.io/s/store-demo-2lkdw4" target="_blank">View React demo</a> |
+<a align="center" href="https://codesandbox.io/s/vanilla-demo-2mwpsl" target="_blank">View Vanilla demo</a>
+</div>
 </div>
 
 # AIO-STORE
 State management for any javascript application. It's small, fast and stable, no boilerplate, no side effects, no context provider and compatible with SSR. Comes with zero dependencies and lets you dispatch actions from anywhere powered with typescript with strong and deep intellisense support.
 Typescript user or Javascript user, it doesn't matter. It is all for you.<br/>
-
-<a align="center" href="https://codesandbox.io/s/store-demo-2lkdw4" target="_blank">View demo</a>   
 
 <!-- TABLE OF CONTENTS 
 <details>
@@ -61,18 +63,18 @@ import { createStore } from "aio-store";
 import { createStore } from "aio-store/react";
 ```
 
-With that you can create two types of store.
-* **Slice store**: A store that mind his own business
-* **Grouped store**: A group of slice store.
+With that, you can create two types of store.
+* **Slice store**: A store that minds his own business
+* **Grouped store**: A group of slice stores.
 
 
 ### Slice store
 
 A slice store is just a part of your store. You can divide your store into several slices, or combine slices into one large
-store. When you create a store, you can organize your data or mix it with actions. The choice is yours. But all actions must be at
-root level. In your actions, the first parameter
-will always be the store data, his name is yours. If you want to pass other parameters, add them after the first parameter. Find out more here:
-<a href="#passing-parameter-to-actions">Passing parameters</a>. Let's take the following example
+store.<br> When you create a store, you can organize your data or mix it with actions. The choice is yours. But all actions must be at
+root level.<br> In your actions, the first parameter
+will always be the store data, his name is yours. If you want to pass other parameters, add them after the first parameter.<br> Find out more here:
+<a href="#passing-parameter-to-actions">Passing parameters</a>.<br> Let's take the following example
 
 
 #### Create a not organised data store
@@ -104,9 +106,9 @@ export const useExpStore = createStore({
 });
 
 ```
-As you see, data and actions are mixed together and unordered. It is not a problem it will work 😀
+As you see, data and actions are mixed together and unordered. It is not a problem it will work. 😀
 
-#### Create an organised data store
+#### Create an organized data store
 
 You can write all data at root level, followed by actions, or group your data like this
 
@@ -165,7 +167,7 @@ export const useExpStore = createStore({
 
 #### Use the store
 
-At this point, for react users, you can use it by two ways when using hook or by listen to <a href="#events">Events</a>.
+At this point, for React users, you can use it in two ways when using hook or by listening to <a href="#events">Events</a>.
 Let's get the store and extract the part we want.<br>
 
 Vanilla users JUMP here <a href="#events">Events</a>
@@ -193,7 +195,7 @@ import { useExpStore } from "./store";
 
 const MyComponent = () => {
 
-  // In case of not organised we ask the store to extract exp for us
+  // In case of not organized we ask the store to extract exp for us
   const exp = useExpStore("exp");
 
   // In case of grouped data ,we ask the store to extract exp for us like this
@@ -211,12 +213,12 @@ With the help of typescript, autocompletion or intellisense, you don't need to m
 
 #### Extract actions or data
 
-You can also extract your actions in the same way, but at root level. Extract the actions yourself or asking the store to do that,
+You can also extract your actions in the same way. Extract the actions yourself or asking the store to do that,
 has no impact on performance.
 
 > Note : <br/> 
 > Every action is chainable. You can use it like this action().action().actions() and so on.
-> OR just call action(). It is totally up to you <br/>
+> Or just call action(). It is totally up to you <br/>
 
 * Extract one action
 
@@ -235,12 +237,15 @@ putOil() // or
 putOil().takePassengers().drive() //and so on. depends on what you want
 ```
 
-Both have no impact on performance. Component that only extract action will never rerender if some data change. It is just a dispatcher. But if the same component extract also some data like this
+Both have no impact on performance.<br>
+Component that only extracts action will never rerender if some data change.<br>
+It is just a dispatcher.
+But if the same component extract also some data like this
 ```js
 // Extracting action and exp value
 const { updateExp, exp } = useExpStore()
 ```
-Then the component will render if `exp` change. <br/>
+Then the component will render if `exp` change.<br/>
 The optimal way to extract only one action is to do so
 ```js
 const updateExp = useExpStore("updateExp")
@@ -267,27 +272,28 @@ const allData = useExpStore("_D")
 
 ```
 
-❗❗❗ Component will render when something change in the data when you extract all data. Even if the component does not consume all of that data <br/>
-Extract all data only if the Component consume all of it, else extract the desired part
+A good tip is to Extract all data only if the Component consumes all of it, else extract the desired part.
 
 #### Performance
 
-Even if you call your action or chain of actions 1000 times in a single click or once, you'll only get one rendering of your component, not 1000 renderings. This applies to synchronous actions. Asynchronous actions render the component when they are ready.
-We cannot wait for all asynchronous actions to finish before rerender
+Even if you call your action or chain of actions 1000 times in a single click or once,
+you'll only get one rendering of your component, not 1000 renderings.<br>
+This applies to synchronous actions. Asynchronous actions render the component when they are ready.
+We cannot wait for all asynchronous actions to finish before rerender.
 
 #### Optimisation
 
-Usually in any react based app `process.env.NODE_ENV` is already exposed. And if so it is good for you because
+Usually in any React-based app `process.env.NODE_ENV` is already exposed. And if so, it is good for you because
 you are going to get the smallest and fastest version of this library.<br/>
-if `process.env.NODE_ENV` is not exposed, expose it your self depending on tools you are using. <br/>
+if `process.env.NODE_ENV` is not exposed, expose it your self depending on tools you are using.<br/>
 * Maybe webpack `--env.NODE_ENV="production"` when you are building your project
 * Maybe cross-env `cross-env NODE_ENV=production` when you are building your project
-* Or whatever the tools you are using
+* Or whatever tools you are using
 
 #### Security 
 
 Do not mutate store like that. You will override the reference with a new object and break the store.
-Keep this in mind, slice or whatever the name you call it, is there as a reference of your real store.
+Keep this in mind, slice or whatever the name you call it, is there as a reference to your real store.
 ```js
 const useStore = createStore({
   myValue: 10,
@@ -329,7 +335,7 @@ const useStore = createStore({
 #### Chain actions call issue
 
 Use chain actions with caution when using promises. Without promises, there's no risk. Enjoy. But with promises,
-Make sure that when call them each action updates a different part
+Make sure that when calling them, each action updates a different part
 of your store and not the same one. Or combine the logic of the actions. For example: 
 
 ```js
@@ -358,26 +364,25 @@ But here
 * We can convert action to synchronous, but it is not what we want.
 * We can change different part of store, `updateValue` changes `value` and `resetValue` changes another prop. But maybe
   it's not what we want
-* We can merge both logic in one action. This is the best thing to do here
+* We can merge both logics in one action. This is the best thing to do here
 
 Both functions `updateValue` and `resetValue` change the same data `slice.value`. This is why we want to combine
-actions. <br>
-If they do not change same property, we can chain like we want even with async actions, no risk at all. But in our case, using chain give this
+actions.<br>
+If they don't change the same property, we can chain like we want even with async actions, no risk at all. But in our case, using a chain give this
 result
 
 ```js
 // calling in this order
 updateValue().resetValue() // <--- output 20
 
-// calling in this order . We reverse the order
+// Calling in this order . We reverse the order
 resetValue().updateValue() // <--- output 20
 ```
 
 * The revers calling `resetValue().updateValue()` match our expectation, because we first reset and then update.
-  It is fine but still dangerous because we can not guarantee the response time of the api.
+  It is fine but still dangerous because we can't guarantee the response time of the api.
 * The default calling `updateValue().resetValue()` output `20`. because `resetValue` finish faster than `updateValue` and
-  nothing was reset. In
-  fact none of these is safe. Below the correct way to achieve what we want
+  nothing was reset. In fact, none of these is safe. Below is the correct way to achieve what we want
 
 ```js
 const store = createStore({
@@ -392,13 +397,13 @@ const store = createStore({
 })
 ```
 > 🛑 You can change the same value in multiple actions when these actions are synchronous. <br/>
-> 🛑 It is not recommended to change the same value in multiple actions when these actions or one of them are asynchronous.
+> 🛑 It is not recommended to change the same value in multiple actions when these actions or one of them is asynchronous.
 
 We group all actions in one promise and handle every change in the correct order in order to get the correct output: `0`
 
 #### Passing parameter to actions
 
-To finish with actions you can pass whatever you want to your actions like this
+To finish with actions, you can pass whatever you want to your actions like this
 
 ```js
 const store = createStore({
@@ -414,7 +419,7 @@ updateValue(params1, params2, otherParams)
 
 ### Group store
 
-A group store is a group of multiple slice. To create it call the same api `createStore` like that
+A group store is a group of multiple slices. To create it call the same api `createStore` like that
 
 ```js
 import { createStore } from "aio-store"
@@ -486,11 +491,11 @@ const modalActions = useGroupStore("modal._D")
 const openModal = useGroupStore("modal.isOpen")
 ```
 
-> We do not enforce rules on you store architecture except for actions who must be at root or first level of your store.
+> We do not enforce rules on your store architecture except for actions who must be at the first level of your store for a slice, and group-first level for a grouped store.
 ```js
 // ✅ This is good                       // ✅ This is good. Reversing order is fine
 const sliceStore = {            |        const sliceStore = {
-  ...myData,                    |             ...MyActions,
+  ...myData,                    |             ...myActions,
   ...myActions                  |             ...myData
 }                               |        }
 -------------------------------------------------------------------------------------------
@@ -509,7 +514,7 @@ const myGroupStore = {
 
 // ❌ This is bad for sliceStore and will be converted to a group by the system
 const sliceStore = {
-  ...Mydata,
+  ...mydata,
   someData: {
     ...myActions
   },
@@ -527,13 +532,13 @@ const myGroupStore = {
 export const useStore = createStore(sliceStore | myGroupStore)
 ```
  
-> If we found an action at root level, we create a slice with that action and ignore all other actions
-> If we found an action at next level, we create a group if no actions are present in root level and ignore all other actions.
-> Any very deep level actions will be ignored. you can do what you want with them ,but they will dispatch nothing
-> * Group store: actions inside the group root level,
-> * Slice store, actions at root level
+> If we find an action at root level, we create a slice with that action and ignore all other actions.<br>
+> If we find an action at the next level, we create a group if no actions are present in the first level and ignore all other actions.<br>
+> Any very deep level actions will be ignored. You can do what you want with them, but they will dispatch nothing
+> * Group store: Actions inside the group-first level,
+> * Slice store: Actions at first level
 
-You also have access to an external dispatcher which can be use anywhere in your app. Inside a component or not,
+You also have access to an external dispatcher which can be used anywhere in your app. Inside a component or not,
 inside a hook or not.
 
 ## External dispatcher
@@ -545,7 +550,7 @@ export const useStore = createStore(...);
 
 ```
 
-Now you can consume data and dispatch actions
+Now you can consume data and dispatch actions.
 ```js
 
 // This is a PURE DISPATCHER
@@ -560,7 +565,7 @@ const actions = useStore("groupKey._A");
 // and so on
 ```
 
-Use the `useStore` in any component like before. Nothing changes. Extract what you want from the store , data, actions, whatever ...
+Use the `useStore` in any component like before. Nothing changes. Extract what you want from the store, data, actions, whatever ...
 
 But now you are able to dispatch action from `GlobalDispatcher` and from any file like this
 
@@ -583,7 +588,7 @@ GroupGlobalDispatcher.yourGroupKey.action().action(); //  and so on
 
 ## Events
 
-You can listen to certain store events that allow you to receive updates without rendering your component. Or if you are not using react.
+You can listen to certain store events that allow you to receive updates without rendering your component, or if you are not using React.
 Very useful when you want to update something stateless. We all hate unnecessary rendering 😀.
 
 * Listen to `change` event. <br/>
@@ -606,7 +611,7 @@ myStore.listenTo('data.content.value',(data) => {
 })
 ```
 
-When listen to a specific part of your store, you can get a snapshot of your store if needed. <br>
+When listening to a specific part of your store, you can get a snapshot of your store if needed.<br>
 #### Vanilla user
 ```js
 const myStore = createStore(...);
@@ -626,12 +631,12 @@ Get a specific part
  const snapshot = myStore("specific.part");
 ```
 
-Your can also do like React User. See below
+You can also do like React User. See below
 
 #### React user. 
 Since your store is a hook, you will get this error if you try to get a snapshot when using event listener <br>
 > [!WARNING]  
-> Hooks can only be called inside the body of a function component  ......
+> Hooks can only be called inside the body of a function component ...
 
 So you can use a function `getSnapshot` to get a snapShot of your store<br>
 `getDataSnapshot` for data only <br>
@@ -683,7 +688,7 @@ myStore.listenTo('_A',(action) => {
 })
 ```
 
-Or if your store is a group. See create a group store  <a href="#group-store">HERE</a>
+Or if your store is a group. See create a group store <a href="#group-store">HERE</a>
 ```js
 // Listen to all Data changes
 myStore.listenTo('groupKey._D',(action) => {
@@ -697,23 +702,129 @@ myStore.listenTo('groupKey._A',(action) => {
 })
 ```
 
+## Interceptors
+Interceptors are the guardians of your store. You can delegate all your control to them and keep your store clean.<br>
+With them, you can : 
+* Allow an action (update or deletion)
+* Reject an action (update or deletion)
+* Override an action (update or deletion)
+  * Override by key
+  * Override by value
+  * Override by key and value
+
+Please use them with caution.<br>
+They are designed to be fired on any change in your store.<br>
+Do not use them to update the UI, instead use <a href="#events">EVENTS</a> or
+<a href="#use-the-store">YOUR STORE</a>
+> [!WARNING]  
+> Never use interceptors to update your UI. Interceptors are safety provider and are fired on store changes
+
+### Add an interceptor
+```js
+// If you want to unsubscribe later
+const unsubscribe = myStore.intercept("data.value",(store) => {
+  console.log(store.intercepted)
+})
+
+// if you do not want to unsubscribe later
+myStore.intercept("data.value",(store) => {
+  console.log(store.intercepted)
+})
+```
+
+`store.intercepted` contains the intercepted data listed below: 
+* `intercepted.key`: Target key, (the key of that the data that request changes)
+* `intercepted.value`: The new value
+* `intercepted.state`: The part of the store that request changes
+
+With that, let's do some control.
+### Reject an action
+```js
+myStore.intercept("data.value",(store) => {
+  if (store.intercepted.value > someMaxValue) {
+    // We reject the action
+    store.rejectAction()
+  }
+})
+```
+### Allow an action
+```js
+myStore.intercept("data.value",(store) => {
+  if (store.intercepted.value < someMaxValue) {
+    // We allow the action
+    store.allowAction()
+  }
+})
+```
+
+### Override an action by key
+```js
+myStore.intercept("data.value",(store) => {
+  if (store.intercepted.value === someMaxValue) {
+    // We redirect changes to another key
+    store.override.key("otherKey")
+  }
+
+})
+```
+
+### Override an action by value
+```js
+myStore.intercept("data.value",(store) => {
+  if (store.intercepted.value === someMaxValue) {
+    // We keep the key and change the value
+    store.override.value("newValue")
+  }
+
+})
+```
+
+### Override an action by key and value
+```js
+myStore.intercept("data.value",(store) => {
+  if (store.intercepted.value === someMaxValue) {
+    // We redirect changes to another key with newValue
+    store.override.keyAndValue("otherKey","newValue")
+  }
+})
+```
+That's it.
+> [!NOTE]
+> <Br>
+> If you place two or more than one interceptor on the same value, Be careful with your controls.<br>
+> A tip is to have only one interceptor per value.
+
+> [!IMPORTANT]
+> <br>
+> If you add an interceptor, don't forget to allow, reject or cancel the action.
+> Otherwise, it will look like a reject while waiting for your action.
+
+For example
+```js
+myStore.intercept("data.value",(store) => {
+ // You intercept and you do nothing,
+  // This is like as a reject, still waiting for an action from you
+})
+```
+It Is similar to a rejection while waiting for an action from you
+
 ## Environment
 
-Skip this step if you are using event listener. Even listener are free from HOOK
+Skip this step if you are using event listener. Every listener is free from HOOK
 * **Client side** <br>
 You have nothing to do. It works like charm.
 * **Server side** 
   * REMIX APP <br>
   You have nothing to do, It works like charm.
   * NEXT-JS APP<br>
-  Add `use client` on component that connect to the store using hook
+  Add `use client` on a component that connect to the store using hook
   ```js
   "use client"
   import .....
   
   const myData = useMyStore();
   ```
-  * For other server side rendering framework, Feel free to open an issue if something happens. I will do my best to help you.
+  * For another server side rendering framework, Feel free to open an issue if something happens. I will do my best to help you.
 
 ## Available tools and options
 
@@ -722,6 +833,7 @@ You have nothing to do. It works like charm.
 * `groupKey._A` A key that can be passed to your grouped store in order to get a PURE DISPATCHER with all actions in that store.
 * `._D` A key that can be passed to your slice store in order to get all data in that store making it a PURE DATA CONSUMER.
 * `groupKey._D` A key that can be passed to your grouped store in order to get all data in that store making it a PURE DATA CONSUMER.
+* `all` A key that can be passed to your any store in order to get everything in that store. It is similar to passing nothing
 
 <!-- LICENSE -->
 

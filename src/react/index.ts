@@ -8,6 +8,7 @@ import {
   finalizeStore
 } from "../helpers/tools";
 import { _checkStoreTarget } from "../helpers/notAllProd";
+import { GROUP } from "../constants/internal";
 
 function createStore<S>(store: S): Store<S> {
   const newStore = getNewStore(store);
@@ -83,7 +84,7 @@ function useStore(
 
   const dispatchData = useCallback(
     function (callback: any) {
-      const subscribe = storeType === "group" ? paths[1] : paths[0];
+      const subscribe = storeType === GROUP ? paths[1] : paths[0];
       if (subscribe === "_A") {
         return () => void 0;
       }
