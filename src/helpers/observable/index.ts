@@ -1,10 +1,6 @@
 import { StoreController } from "../store";
-import { _UtilError } from "../error";
-import {
-  assignObservableAndProxy,
-  removeObservableAndProxy,
-  dispatchEvent
-} from "../tools";
+import { assignObservableAndProxy, removeObservableAndProxy } from "../util";
+import { _checkSet } from "../developement";
 
 class ObservableMap extends Map {
   readonly #event: string;
@@ -27,7 +23,12 @@ class ObservableMap extends Map {
     if (this.#init) {
       super.set(
         key,
-        assignObservableAndProxy(value, this.#event, this.#storeController)
+        assignObservableAndProxy(
+          value,
+          this.#event,
+          this.#storeController,
+          true
+        )
       );
       return this;
     }
@@ -44,17 +45,21 @@ class ObservableMap extends Map {
             assignObservableAndProxy(
               validatedValue,
               this.#event,
-              this.#storeController
+              this.#storeController,
+              true
             )
           );
-          dispatchEvent(this.#event, this.#storeController);
         },
         overrideKey: (newKey: any) => {
           super.set(
             newKey,
-            assignObservableAndProxy(value, this.#event, this.#storeController)
+            assignObservableAndProxy(
+              value,
+              this.#event,
+              this.#storeController,
+              true
+            )
           );
-          dispatchEvent(this.#event, this.#storeController);
         },
         overrideKeyAndValue: (newKey: any, validatedValue: any) => {
           super.set(
@@ -62,10 +67,10 @@ class ObservableMap extends Map {
             assignObservableAndProxy(
               validatedValue,
               this.#event,
-              this.#storeController
+              this.#storeController,
+              true
             )
           );
-          dispatchEvent(this.#event, this.#storeController);
         }
       });
     }
@@ -79,10 +84,7 @@ class ObservableMap extends Map {
       value: null,
       state: state,
       action: "clearInMap",
-      allowAction: () => {
-        super.clear();
-        dispatchEvent(this.#event, this.#storeController);
-      },
+      allowAction: super.clear,
       overrideKey: () => void 0,
       overrideKeyAndValue: () => void 0
     });
@@ -97,16 +99,9 @@ class ObservableMap extends Map {
       action: "deleteInMap",
       allowAction: () => {
         super.delete(key);
-        dispatchEvent(this.#event, this.#storeController);
       },
-      overrideKey: (newKey: any) => {
-        super.delete(newKey);
-        dispatchEvent(this.#event, this.#storeController);
-      },
-      overrideKeyAndValue: (newKey: any) => {
-        super.delete(newKey);
-        dispatchEvent(this.#event, this.#storeController);
-      }
+      overrideKey: super.delete,
+      overrideKeyAndValue: super.delete
     });
     return true;
   }
@@ -129,20 +124,15 @@ class ObservableSet extends Set {
     this.#init = false;
   }
 
-  #noSet({ key }: any, state: any) {
-    if (process.env.NODE_ENV !== "production") {
-      throw _UtilError({
-        name: `Override key ${key} in Set`,
-        message: "Set does not have any key to override",
-        state
-      });
-    }
-  }
-
   add(value: any) {
     if (this.#init) {
       super.add(
-        assignObservableAndProxy(value, this.#event, this.#storeController)
+        assignObservableAndProxy(
+          value,
+          this.#event,
+          this.#storeController,
+          true
+        )
       );
       return this;
     }
@@ -158,14 +148,14 @@ class ObservableSet extends Set {
             assignObservableAndProxy(
               validatedValue,
               this.#event,
-              this.#storeController
+              this.#storeController,
+              true
             )
           );
-          dispatchEvent(this.#event, this.#storeController);
         },
-        overrideKey: (key: any) => this.#noSet({ key }, state),
+        overrideKey: (key: any) => _checkSet({ key }, state),
         overrideKeyAndValue: (key: any, newValue: any) =>
-          this.#noSet({ key, value: newValue }, state)
+          _checkSet({ key, value: newValue }, state)
       });
     }
     return this;
@@ -180,11 +170,10 @@ class ObservableSet extends Set {
       action: "clearInSet",
       allowAction: () => {
         super.clear();
-        dispatchEvent(this.#event, this.#storeController);
       },
-      overrideKey: (key?: any) => this.#noSet({ key }, state),
+      overrideKey: (key?: any) => _checkSet({ key }, state),
       overrideKeyAndValue: (key?: any, newValue?: any) =>
-        this.#noSet({ key, value: newValue }, state)
+        _checkSet({ key, value: newValue }, state)
     });
   }
 
@@ -197,16 +186,9 @@ class ObservableSet extends Set {
       action: "deleteInSet",
       allowAction: () => {
         super.delete(key);
-        dispatchEvent(this.#event, this.#storeController);
       },
-      overrideKey: (newKey: any) => {
-        super.delete(newKey);
-        dispatchEvent(this.#event, this.#storeController);
-      },
-      overrideKeyAndValue: (newKey: any) => {
-        super.delete(newKey);
-        dispatchEvent(this.#event, this.#storeController);
-      }
+      overrideKey: super.delete,
+      overrideKeyAndValue: super.delete
     });
     return true;
   }

@@ -10,7 +10,7 @@
 </div>
 
 # AIO-STORE
-State management for any javascript application. It's small, fast and stable, no boilerplate, no side effects, no context provider and compatible with SSR. Comes with zero dependencies and lets you dispatch actions from anywhere powered with typescript with strong and deep intellisense support.
+State management for any javascript application. It's small, fast and stable, no boilerplate, no side effects, no context provider and compatible with SSR. Comes with zero dependencies and lets you dispatch actions from anywhere.
 Typescript user or Javascript user, it doesn't matter. It is all for you.<br/>
 
 <!-- TABLE OF CONTENTS 
@@ -207,7 +207,7 @@ const MyComponent = () => {
 
 #### Autocomplete or IntelliSense
 
-With the help of typescript, autocompletion or intellisense, you don't need to memorize the order of your data.
+Autocompletion or intellisense is there for you. You don't need to memorize the order of your data.
 
 <img src="assets/autocomplete.png" alt="icon" width="100%" height="auto">
 
@@ -733,9 +733,10 @@ myStore.intercept("data.value",(store) => {
 ```
 
 `store.intercepted` contains the intercepted data listed below: 
-* `intercepted.key`: Target key, (the key of that the data that request changes)
+* `intercepted.key`: Target key, (the key of the data that request changes)
 * `intercepted.value`: The new value
 * `intercepted.state`: The part of the store that request changes
+* `intercepted.event`: The intercepted event
 
 With that, let's do some control.
 ### Reject an action
@@ -789,13 +790,11 @@ myStore.intercept("data.value",(store) => {
 })
 ```
 That's it.
-> [!NOTE]
-> <Br>
+> [!NOTE]<br>
 > If you place two or more than one interceptor on the same value, Be careful with your controls.<br>
 > A tip is to have only one interceptor per value.
 
-> [!IMPORTANT]
-> <br>
+> [!IMPORTANT]<br>
 > If you add an interceptor, don't forget to allow, reject or cancel the action.
 > Otherwise, it will look like a reject while waiting for your action.
 
@@ -806,7 +805,20 @@ myStore.intercept("data.value",(store) => {
   // This is like as a reject, still waiting for an action from you
 })
 ```
-It Is similar to a rejection while waiting for an action from you
+It Is similar to a rejection while waiting for an action from you.
+
+> [!NOTE]<br>
+> If you intercept `data.content.value`, then you also radical intercept change on `data` and radical change on `data.content`<br>
+> But not change on `data.someThing` or `data.content.something`.
+> 
+Radical changes means.<br>
+For example: `data` was `{content: {value: 10}}`, and for some reason `data` becomes a `5`.<br>
+We will immediately call your interceptor.<br>
+Original line is broken because `content.value` disappears.
+
+But if something else changes.<br>
+For example `data.something.else` changes,<br>
+Then nothing will be intercepted. Because the `data.content.value` and `data.something.else` are on different line
 
 ## Environment
 

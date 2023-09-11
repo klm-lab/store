@@ -1,0 +1,51 @@
+//❗❗❗❗❗❗❗ NOT good but it was the beginning of the idea ❗❗❗❗❗❗❗
+
+/*
+       * If data[key] is an object then event is rootEvent + newKey
+       * else event is event + newKey.
+       *
+       * For example: data = { value: "", other: { deep: {}},
+       * When we call assignObservableAndProxy with event "root", event root is saved
+       * in rootEvent. So event = "root" and rootEvent = "root",
+       * now data["value"] is not an object, it is a string.
+       * event becomes "root.value" and rootEvent is still "root", because there are a no
+       * data.value.something.... If we change rootEvent also, on next loop because event are saved in rootEvent,
+       * event will be data.value.other.❌ This is wrong. Value is not an object. It is a string.
+       * That is why we do event = event("root") + key("value). and we keep , rootEvent "root".
+       *
+       * data["other"] is an object so, event will become "root.other" and rootEvent will become also
+       * "root.other". because root.other is valid, other is an object ✅
+       * That is why we do, event = rootEvent(still "root") + key("other").
+       * Then on next call rootEvent will copy event and be "root.other" until find
+       * a data where data[someKey] is not an object. then rootEvent will keep its value.
+       * */
+
+      /*
+       * eventsObject will be empty at every assignObservableAndProxy call.
+       * Because every assignObservableAndProxy create its own event, add it to eventsObject and pass it
+       * to createProxyValidator.
+       * We choose using Object instead of array, so when dispatching, we will just
+       * dispatch the relevant key is the object, instead of filtering the array.
+       *
+       * eventsObject will contain possible event with the current key
+       * */
+
+      /*
+       * We use lockEvent for Map or Set,
+       * Let take this store: store = {data:{other: new Map(), value: 45}}.
+       * Available target for the moment are
+       * "data"
+       * "data.other" // here other is a Map, but we can not go inside that map for the moment.
+       * "data.value"
+       * So when found an event for data.other. we lock it and use it for any changes inside the Map
+       * */
+
+// if (data[key] && data[key].constructor.name === "Object") {
+        //   event = `${helpers.rootEvent}.${key}`;
+        //   // tab.push(`${helpers.rootEvent}.${key}`);
+        //   helpers.eventsObject[key] = `${helpers.rootEvent}.${key}`;
+        // } else {
+        //    // tab.push(`${helpers.rootEvent}.${key}`);
+        //    helpers.eventsObject[key] = `${event}.${key}`;
+        //   event = event ? `${event}.${key}` : (`${key}` as string);
+        // }

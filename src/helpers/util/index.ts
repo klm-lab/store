@@ -1,17 +1,10 @@
-import { _UtilError } from "../error";
-import {
-  GROUP,
-  GROUP_STORE_EVENT,
-  INTERCEPT,
-  PRIVATE_STORE_EVENT,
-  SLICE
-} from "../../constants/internal";
+import { ALL, GROUP, SLICE } from "../../constants/internal";
 import type {
   ChangeHandlerType,
   InterceptOptionsType,
   StoreParamsType,
   StoreType,
-  UserParamsType
+  StringObjectType
 } from "../../types";
 import { Store, StoreController } from "../store";
 import {
@@ -20,23 +13,10 @@ import {
   _checkOnEvent,
   _validateStore,
   _warnProdNodeENV,
-  checkReWriteStoreAndGetResult,
-  createPath
-} from "../notAllProd";
+  _utilError
+} from "../developement";
+import { checkReWriteStoreAndGetResult, createPath } from "../commonProdDev";
 import { ObservableSet, ObservableMap } from "../observable";
-
-export function dispatchEvent(event: string, storeController: StoreController) {
-  /* We check if current event is not privateEvent.
-   * If so, we call all group listener else, we do nothing
-   * */
-  if (event !== PRIVATE_STORE_EVENT) {
-    storeController && storeController.dispatch(GROUP_STORE_EVENT);
-  }
-  /*
-   * We call the event listener
-   * */
-  storeController && storeController.dispatch(event);
-}
 
 function handleChanges(
   params: ChangeHandlerType,
@@ -52,7 +32,6 @@ function handleChanges(
       action: action,
       overrideKey: (newKey: any) => {
         state[newKey] = assignObservableAndProxy(value, event, storeController);
-        dispatchEvent(event, storeController);
       },
       allowAction: (validatedValue: any) => {
         state[key] = assignObservableAndProxy(
@@ -60,7 +39,6 @@ function handleChanges(
           event,
           storeController
         );
-        dispatchEvent(event, storeController);
       },
       overrideKeyAndValue: (newKey: any, validatedValue: any) => {
         state[newKey] = assignObservableAndProxy(
@@ -68,7 +46,6 @@ function handleChanges(
           event,
           storeController
         );
-        dispatchEvent(event, storeController);
       }
     };
   }
@@ -80,27 +57,28 @@ function handleChanges(
       action: action,
       overrideKey: (newKey: any) => {
         delete state[newKey];
-        dispatchEvent(event, storeController);
       },
       allowAction: () => {
         delete state[key];
-        dispatchEvent(event, storeController);
       },
       overrideKeyAndValue: (newKey: any) => {
         delete state[newKey];
-        dispatchEvent(event, storeController);
       }
     };
   }
   storeController.handleDispatch(event, options);
 }
 
-function createProxyValidator(event: string, storeController: StoreController) {
+function createProxyValidator(
+  event: StringObjectType,
+  storeController: StoreController
+) {
+  // console.warn("create proxy", event);
   return {
     set: function (state: any, key: any, value: any) {
       if (!isSame(state[key], value)) {
         handleChanges(
-          { event, state, key, value, action: "update" },
+          { event: event[key], state, key, value, action: "update" },
           storeController
         );
       }
@@ -108,7 +86,13 @@ function createProxyValidator(event: string, storeController: StoreController) {
     },
     deleteProperty: (target: any, prop: any) => {
       handleChanges(
-        { event, state: target, key: prop, value: null, action: "delete" },
+        {
+          event: event[prop],
+          state: target,
+          key: prop,
+          value: null,
+          action: "delete"
+        },
         storeController
       );
       return true;
@@ -120,26 +104,18 @@ function handleObservable(
   data: any,
   element: any,
   type: string,
-  event: any,
+  event: string | null,
   storeController: StoreController | null
 ) {
   data.forEach((v: any, k: any) => {
     if (type === "Map") {
       element.set(
         k,
-        event
-          ? storeController &&
-              assignObservableAndProxy(v, event, storeController)
-          : removeObservableAndProxy(v)
+        event ? storeController && v : removeObservableAndProxy(v)
       );
     }
     if (type === "Set") {
-      element.add(
-        event
-          ? storeController &&
-              assignObservableAndProxy(v, event, storeController)
-          : removeObservableAndProxy(v)
-      );
+      element.add(event ? storeController && v : removeObservableAndProxy(v));
     }
   });
   element.finishInit && element.finishInit();
@@ -149,12 +125,28 @@ function handleObservable(
 export function assignObservableAndProxy(
   data: any,
   event: string,
-  storeController: StoreController
+  storeController: StoreController,
+  lockEvent = false,
+  helpers = {
+    rootEvent: event,
+    eventsObject: {} as StringObjectType
+  }
 ) {
+  // console.log("entered with =>", event, helpers.rootEvent);
   if (data && data.constructor.name === "Array") {
-    return new Proxy(data, createProxyValidator(event, storeController));
+    /* We can use .at here but for maximum compatibility, we will go with old way.
+     * We explicitly create eventsObject for array, because helpers.eventsObject is empty when
+     * we come here
+     */
+    const tabKey = event.split(".");
+    const key = tabKey[tabKey.length - 1];
+    return new Proxy(
+      data,
+      createProxyValidator({ [key]: event }, storeController)
+    );
   }
   if (data && data.constructor.name === "Map") {
+    // console.log("map locked event", event);
     return handleObservable(
       data,
       new ObservableMap(storeController, event, true),
@@ -174,11 +166,49 @@ export function assignObservableAndProxy(
   }
   if (data && data.constructor.name === "Object") {
     const entries: any = Object.entries(data).map(([key, value]) => {
-      return [key, assignObservableAndProxy(value, event, storeController)];
+      // console.log("working with =>", helpers.rootEvent, "key =>", key);
+      /*
+       * eventsObject will be empty at every assignObservableAndProxy call.
+       * Because every assignObservableAndProxy create its own event, add it to eventsObject and pass it
+       * to createProxyValidator.
+       * We choose using Object instead of array, so when dispatching, we will just
+       * dispatch the relevant key is the object, instead of filtering the array.
+       *
+       * eventsObject will contain possible event with the current key
+       * */
+
+      /*
+       * We use lockEvent for Map or Set,
+       * Let take this store: store = {data:{other: new Map(), value: 45}}.
+       * Available target for the moment are
+       * "data"
+       * "data.other" // here other is a Map, but we can not go inside that map for the moment.
+       * "data.value"
+       * So when found an event for data.other. we lock it and use it for any changes inside the Map
+       * */
+
+      /*
+       * The value of helpers.rootEvent is preserved and only changed on next loop.
+       * Because we do not override it. We ca not just use event, because we change event.
+       * Remove comment from console.log to debug and understand
+       * */
+
+      if (!lockEvent) {
+        event =
+          helpers.rootEvent !== "" ? `${helpers.rootEvent}.${key}` : `${key}`;
+        // console.log("creating event =>", event);
+        helpers.eventsObject[key] = event;
+      } else {
+        helpers.eventsObject[key] = event;
+      }
+      return [
+        key,
+        assignObservableAndProxy(value, event, storeController, lockEvent)
+      ];
     });
     return new Proxy(
       Object.fromEntries(entries),
-      createProxyValidator(event, storeController)
+      createProxyValidator(helpers.eventsObject, storeController)
     );
   }
   return data;
@@ -208,7 +238,7 @@ export function removeObservableAndProxy(data: any) {
 export function getStoreType(store: any): StoreType {
   let storeType: string = SLICE;
   if (typeof store === "undefined" || store === null) {
-    throw _UtilError({
+    _utilError({
       name: `Creating store`,
       message: `The store is empty`,
       state: store
@@ -216,7 +246,7 @@ export function getStoreType(store: any): StoreType {
   }
 
   if (store?.constructor?.name !== "Object") {
-    throw _UtilError({
+    _utilError({
       name: `Creating store`,
       message: `The store is not an object`,
       state: store
@@ -298,11 +328,10 @@ export function isSame(value1: any, value2: any): boolean {
 }
 
 export function getData(
-  userParams: UserParamsType,
+  paths: string[],
   storeParams: StoreParamsType,
   isSnapShot = false
 ) {
-  const { paths, target } = userParams;
   const { store, storeType } = storeParams;
 
   const storeKey = paths[0];
@@ -326,16 +355,13 @@ export function getData(
   }
 
   return removeObservableAndProxy(
-    checkReWriteStoreAndGetResult(storeParams, target)
+    checkReWriteStoreAndGetResult(storeParams, paths)
   );
 }
 
-export function getEventAndPath(storeParams: StoreParamsType, target?: string) {
+export function getEventAndPath(target?: string) {
   const paths = createPath(target);
-  const EVENT =
-    storeParams.storeType === GROUP
-      ? paths[0] ?? GROUP_STORE_EVENT
-      : PRIVATE_STORE_EVENT;
+  const EVENT = target ?? ALL;
   return {
     event: EVENT,
     paths
@@ -347,17 +373,15 @@ function sendDataWithMemo(
   callback: any,
   storeParams: StoreParamsType
 ) {
-  const { storeController } = storeParams;
-  const { event: EVENT, paths } = getEventAndPath(storeParams, event);
-  const userParams = event
-    ? {
-        paths,
-        target: event
-      }
-    : { paths };
-  let snapShot = getData(userParams, storeParams);
+  const { storeController, storeType } = storeParams;
+  const { event: EVENT, paths } = getEventAndPath(event);
+  let snapShot = getData(paths, storeParams);
+  const subscribe = storeType === GROUP ? paths[1] : paths[0];
+  if (subscribe === "_A") {
+    return () => void 0;
+  }
   return storeController.subscribe(EVENT, () => {
-    const newData = getData(userParams, storeParams);
+    const newData = getData(paths, storeParams);
     if (!isSame(snapShot, newData)) {
       snapShot = newData;
       callback(snapShot);
@@ -376,9 +400,9 @@ export function attachEvent(store: any, storeParams: StoreParamsType) {
   };
   store.intercept = function (event: string, callback: any) {
     _checkListenToEvent(event, callback, storeParams);
-    const { event: EVENT } = getEventAndPath(storeParams, event);
+    const { event: EVENT } = getEventAndPath(event);
     const { storeController } = storeParams;
-    return storeController.subscribe(EVENT + INTERCEPT, callback);
+    return storeController.registerInterceptor(EVENT, callback);
   };
   return store;
 }
@@ -390,16 +414,16 @@ export function attachSnapshotHandler(
   store.getActions = function (event?: string) {
     _checkNull(event);
     const paths = storeParams.storeType === GROUP ? ["", "_A"] : ["_A"];
-    return getData({ paths }, storeParams, true);
+    return getData(paths, storeParams, true);
   };
   store.getDataSnapshot = function (event?: string) {
     _checkNull(event);
     const paths = storeParams.storeType === GROUP ? ["", "_D"] : ["_D"];
-    return getData({ paths }, storeParams, true);
+    return getData(paths, storeParams, true);
   };
   store.getSnapshot = function (event?: string) {
     _checkNull(event);
-    return getData({ paths: [] }, storeParams, true);
+    return getData([], storeParams, true);
   };
   return store;
 }

@@ -1,13 +1,13 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
-import type { Store, StoreParamsType, UserParamsType } from "../types";
+import type { Store, StoreParamsType } from "../types";
 import {
   getData,
   getEventAndPath,
   isSame,
   getNewStore,
   finalizeStore
-} from "../helpers/tools";
-import { _checkStoreTarget } from "../helpers/notAllProd";
+} from "../helpers/util";
+import { _checkStoreTarget } from "../helpers/developement";
 import { GROUP } from "../constants/internal";
 
 function createStore<S>(store: S): Store<S> {
@@ -15,23 +15,19 @@ function createStore<S>(store: S): Store<S> {
 
   function useSyncStore(target?: string) {
     _checkStoreTarget(target);
-    return useStore({ target }, newStore);
+    return useStore(newStore, target);
   }
 
   useSyncStore.dispatcher = newStore.store.actions;
   return finalizeStore(useSyncStore, newStore);
 }
 
-function useStore(
-  userParams: Omit<UserParamsType, "paths">,
-  storeParams: StoreParamsType
-) {
-  const { target } = userParams;
+function useStore(storeParams: StoreParamsType, target?: string) {
   const { storeType, storeController } = storeParams;
 
   const [paths, memoizedState, EVENT] = useMemo(() => {
-    const { paths, event } = getEventAndPath(storeParams, target);
-    return [paths, getData({ paths, ...userParams }, storeParams), event];
+    const { paths, event } = getEventAndPath(target);
+    return [paths, getData(paths, storeParams), event];
   }, [target]);
 
   /*
@@ -47,12 +43,12 @@ function useStore(
   const getSnapshot = useCallback(
     function () {
       // New data with new reference without proxy
-      const newData = getData({ paths, ...userParams }, storeParams);
+      const newData = getData(paths, storeParams);
       /*
        * We use our custom verification tool, because Object.is just verify the reference and not the content.
        * Let's take snapShot = {value: 2} and newData = {value: 2}.
        * Object.is(snapShot,newData) will return false because, newData reference change everyTime it is call.
-       * newData value is same as snapShot but newData reference is different from snapShot reference
+       * newData value is same as snapshot but newData reference is different from snapShot reference
        * This is because proxy is removed from the data before return.
        * */
       if (isSame(snapShot, newData)) {

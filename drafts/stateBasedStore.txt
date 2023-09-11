@@ -1,4 +1,4 @@
-import { _UtilError } from "./helpers/error";
+import { _utilError } from "./helpers/error";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   CreateStoreType,
@@ -154,7 +154,7 @@ function createStore(store: any, storeOptions: any) {
         process.env.NODE_ENV !== "production" &&
         ((typeof target as any) !== "string" || target === "")
       ) {
-        throw _UtilError({
+        throw _utilError({
           name: `Connecting to ${target}`,
           message: `At least one target is required if you are using a grouped store. If you don't want to provide one, use a sliceStore instead by removing storeType from storeOptions or set it to "slice"`
         });
@@ -184,7 +184,7 @@ function createStore(store: any, storeOptions: any) {
 
   const useSliceStore = (target?: string, willDefineLater = false) => {
     if (process.env.NODE_ENV !== "production" && target === "") {
-      throw _UtilError({
+      throw _utilError({
         name: `Connecting to ${target}`,
         message: `Target is optional for a slice. But it need to be valid is you want it. Actual value is empty, fix it or remove it`
       });
@@ -256,7 +256,7 @@ function getData(userParams: UserParamsType, storeParams: StoreParamsType) {
       result &&
       typeof result[p] === "undefined"
     ) {
-      throw _UtilError({
+      throw _utilError({
         name: `Connecting to ${target}`,
         message: `${p} is undefined in the store. If it will be available later, just pass willDefineLater true as second param of useStore('',true). Use with caution`
       });

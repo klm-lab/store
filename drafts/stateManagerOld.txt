@@ -1,7 +1,7 @@
 import { StoreType } from "../../types";
 import { isSame } from "../../helpers/external";
 import { _validateStore } from "../../helpers/tools";
-import { _UtilError } from "../../helpers/error";
+import { _utilError } from "../../helpers/error";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const PRIVATE_STORE_EVENT = "privateStateChange";
@@ -405,7 +405,7 @@ function getData(paths: string[], target: string, willDefineLater = false) {
     process.env.NODE_ENV !== "production" &&
     typeof result[storeKey] === "undefined"
   ) {
-    throw _UtilError({
+    throw _utilError({
       name: `Listening to ${target} changes`,
       message: `${target} is undefined in the store`
     });
@@ -425,7 +425,7 @@ function getData(paths: string[], target: string, willDefineLater = false) {
       typeof result[p] === "undefined"
     ) {
       console.warn(`Target ${target} not defined`);
-      throw _UtilError({
+      throw _utilError({
         name: `Connecting to ${target}`,
         message: `${p} is undefined in the store`
       });
@@ -442,7 +442,7 @@ export function useStore(target: string, willDefineLater = false) {
       process.env.NODE_ENV !== "production" &&
       (typeof target as unknown) !== "string"
     ) {
-      throw _UtilError({
+      throw _utilError({
         name: `Listening to ${target} changes`,
         message: `${target} need to be a string path. Ex: "data.content.value or data"`
       });

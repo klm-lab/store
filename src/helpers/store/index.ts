@@ -1,116 +1,19 @@
-import { assignObservableAndProxy } from "../tools";
-import { INTERCEPT, PRIVATE_STORE_EVENT } from "../../constants/internal";
-import type { InterceptOptionsType } from "../../types";
-import { _UtilError } from "../error";
-
-class StoreController {
-  readonly #events: any;
-
-  constructor() {
-    this.#events = {};
-  }
-
-  subscribe(event: string, listener: any) {
-    if (!(event in this.#events)) {
-      this.#events[event] = new Set();
-    }
-    this.#events[event].add(listener);
-    return () => this.unsubscribe(event, listener);
-  }
-
-  unsubscribe(event: string, listener: any) {
-    if (event in this.#events) {
-      this.#events[event].delete(listener);
-    }
-  }
-
-  dispatch(event: string) {
-    if (!(event in this.#events)) {
-      return;
-    }
-    this.#events[event].forEach((listener: any) => listener());
-  }
-
-  #canICall(options: InterceptOptionsType, name: string, key = false) {
-    if (process.env.NODE_ENV !== "production") {
-      if (key) {
-        if (["clearInSet", "clearInMap"].includes(options.action)) {
-          throw _UtilError({
-            name: `Override when action is ${options.action}`,
-            message: `Current action not allow you to call ${name}`
-          });
-        }
-        return;
-      }
-      if (
-        [
-          "delete",
-          "deleteInSet",
-          "deleteInMap",
-          "clearInSet",
-          "clearInMap"
-        ].includes(options.action)
-      ) {
-        throw _UtilError({
-          name: `Override when action is ${options.action}`,
-          message: `Current action not allow you to call ${name}`
-        });
-      }
-    }
-  }
-
-  handleDispatch(event: string, options: InterceptOptionsType) {
-    const INTERCEPT_EVENT = event + INTERCEPT;
-    if (!(INTERCEPT_EVENT in this.#events)) {
-      return options.allowAction(options.value);
-    }
-    this.#events[INTERCEPT_EVENT].forEach((listener: any) =>
-      listener({
-        intercepted: {
-          value: options.value,
-          state: options.state,
-          key: options.key,
-          action: options.action
-        },
-        allowAction: () => {
-          options.allowAction(options.value);
-        },
-        override: {
-          value: (value?: any) => {
-            this.#canICall(options, "override.value");
-            options.allowAction(value ?? options.value);
-          },
-          key: (key?: any) => {
-            this.#canICall(options, "override.key", true);
-            options.overrideKey(key ?? options.key);
-          },
-          keyAndValue: (key?: any, value?: any) => {
-            this.#canICall(options, "override.keyAndValue", true);
-            options.overrideKeyAndValue(
-              key ?? options.key,
-              value ?? options.value
-            );
-          }
-        },
-        rejectAction: () => void 0
-      })
-    );
-  }
-}
+import { assignObservableAndProxy } from "../util";
+import { StoreController } from "./controller";
 
 class Store {
   private readonly _store: any;
+  private readonly _StoreActions: any;
   private readonly _storeController: StoreController;
   private _privateStore: any;
   private _privateStoreActions: any;
-  private readonly _actionsStore: any;
 
   constructor() {
     this._storeController = new StoreController();
     this._store = {};
     this._privateStore = {};
     this._privateStoreActions = {};
-    this._actionsStore = {};
+    this._StoreActions = {};
     this.init = this.init.bind(this);
     this.initPrivate = this.initPrivate.bind(this);
   }
@@ -132,7 +35,7 @@ class Store {
   }
 
   get actions() {
-    return this._actionsStore;
+    return this._StoreActions;
   }
 
   #separateActionsAndData(slice: any) {
@@ -165,7 +68,7 @@ class Store {
        * */
       const { store, actions } = this.#separateActionsAndData(slice);
       this._store[userStoreKey] = store;
-      this._actionsStore[userStoreKey] = actions;
+      this._StoreActions[userStoreKey] = actions;
 
       // We create a proxy for every stored data
       this._store[userStoreKey] = assignObservableAndProxy(
@@ -174,11 +77,9 @@ class Store {
         this._storeController
       );
       // We check if an action is present
-      if (this._actionsStore[userStoreKey]) {
+      if (this._StoreActions[userStoreKey]) {
         // We get the slice actions: EX: test actions in store {test: {someAction: ()=> ...}.other: {someAction: () => ...}}
-        const actionsSlice = this._actionsStore[userStoreKey];
-        // we get the data with proxy of currentKey
-        const sliceData = this._store[userStoreKey];
+        const actionsSlice = this._StoreActions[userStoreKey];
         /* We recreate actions passing proxy data
          * There is no need to apply proxy on actions. That why we do this in a separate loop
          * We also add chaining actions. So user can do actions().actions()....
@@ -187,13 +88,14 @@ class Store {
           // This the action define by the user
           const userFunction = actionsSlice[key];
           //Now we recreate actions and passing data to be updated and all other user params
-          this._actionsStore[userStoreKey][key] = function (...values: any) {
-            userFunction(sliceData, ...values);
+          this._StoreActions[userStoreKey][key] = (...values: any) => {
+            userFunction(this._store[userStoreKey], ...values);
             return actionsSlice;
           };
         }
       }
     }
+    this._storeController.createStoreEvent(this._store, "");
   }
 
   initPrivate(params: any) {
@@ -209,26 +111,27 @@ class Store {
     this._privateStore = store;
     this._privateStoreActions = actions;
 
-    // We create proxy with the store
+    // We create a proxy with the store
     this._privateStore = assignObservableAndProxy(
       this._privateStore,
-      PRIVATE_STORE_EVENT,
+      "",
       this._storeController
     );
     /* We recreate actions passing proxy data
-     * We can not do it in one loop . Because, there is no need to apply proxy on actions.
-     * We also add chaining actions. So user can do actions().actions()....
+     * We cannot do it in one loop.
+     * Because there is no need to apply proxy on actions.
+     * We also add chaining actions.
+     * So user can do actions().actions()....
      * */
     for (const key in this._privateStoreActions) {
       const element = this._privateStoreActions[key];
-      // For 'this.' issue, we save the store and actions and pass it down
-      const sliceData = this._privateStore;
       const actions = this._privateStoreActions;
-      this._privateStoreActions[key] = function (...values: any) {
-        element(sliceData, ...values);
+      this._privateStoreActions[key] = (...values: any) => {
+        element(this._privateStore, ...values);
         return actions;
       };
     }
+    this._storeController.createStoreEvent(this._privateStore, "");
   }
 }
 

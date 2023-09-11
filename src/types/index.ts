@@ -199,6 +199,7 @@ interface OverrideType {
 interface InterceptDataType<S, TargetKey> {
   intercepted: {
     key: any;
+    event: string;
     value: any;
     state: StoreOutputType<S, TargetKey>;
   };
@@ -292,11 +293,6 @@ type StoreDataAndActionsType = {
   actions: any;
 };
 
-type UserParamsType = {
-  paths: string[];
-  target?: string;
-};
-
 type StoreType = "slice" | "group";
 
 type StoreParamsType = {
@@ -308,19 +304,21 @@ type StoreParamsType = {
 type ErrorType = {
   name: string;
   message: string;
-  stack?: string;
-  matchKey?: string;
   state?: any;
+};
+
+type StringObjectType = {
+  [k in string]: string;
 };
 
 export type {
   Store,
   StoreDataAndActionsType,
-  UserParamsType,
   StoreParamsType,
   ErrorType,
   StoreType,
   InterceptOptionsType,
   InterceptActionType,
-  ChangeHandlerType
+  ChangeHandlerType,
+  StringObjectType
 };
