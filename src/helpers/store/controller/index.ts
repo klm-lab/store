@@ -145,7 +145,7 @@ class StoreController {
        * Fine. Now another interceptor INT_TWO comes with this event => 'data.content'.
        * We do the same thing as adding its listener to 'data' and 'data.content'.
        *
-       * 'data' has new listener, 'data.content' also, and 'data.content.value' keeps its old listener and it is fine.
+       * 'Data' has new listener, 'data.content' also, and 'data.content.value' keeps its old listener and it is fine.
        *
        * But why do we need to check the length ???.
        *
@@ -168,7 +168,7 @@ class StoreController {
        * Also, remember this.
        * Every doted key near the root key has priority on other keys
        * So, when the length is lower, the event is a priority. We need to override the oldInterceptor event with the new one.
-       * for next check.
+       * For next check.
        *
        * If the length is the same, then we keep the latest one
        *
@@ -193,7 +193,7 @@ class StoreController {
     //Interceptors counter-increment
     this.#totalInterceptors += 1;
     /* Every doted key near the root key has priority on other keys.
-     * if the length of the new one is short, we override else,
+     * If the length of the new one is short, we override else,
      * we keep it until find a one that is short and then override
      * */
     if (this.#olderInterceptorEvent.length < event.length) {
@@ -351,7 +351,7 @@ class StoreController {
     // We create calledInterceptors collection
     const calledInterceptors = new Set();
 
-    // We define nextInterceptor actions. It takes an action and options that can be changed by interceptors
+    // We define nextInterceptor actions. It takes action and options that can be changed by interceptors
     const nextInterceptor = (
       interceptorAction: InterceptorActionsType,
       finalOptions?: any
@@ -394,7 +394,7 @@ class StoreController {
         return;
       }
       /*
-       * When no interceptor is found on a current doted key or, it sfound but the function is already called
+       * When no interceptor is found on a current doted key or, it is found but the function is already called
        * We move to the next key until done
        * */
       nextInterceptor(interceptorAction, finalOptions);

@@ -900,9 +900,9 @@ myStore.intercept("data.content.value", (store) => {
 
 ```js
 myStore.intercept("data", (store) => {
-}) // ❗ is overrided
+}) // ❗ is override
 myStore.intercept("data", (store) => {
-}) // ❗ is overrided
+}) // ❗ is override
 myStore.intercept("data", (store) => {
 }) // ✅ this one is kept
 ```

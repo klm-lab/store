@@ -142,7 +142,7 @@ export function assignObservableAndProxy(
   // console.log("entered with =>", event, helpers.rootEvent);
   if (data && data.constructor.name === "Array") {
     /* We can use .at here but for maximum compatibility, we will go with old way.
-     * We explicitly create eventsObject for array, because helpers.eventsObject is empty when
+     * We explicitly create eventsObject for an array because helpers.eventsObject is empty when
      * we come here
      */
     const tabKey = event.split(".");
@@ -176,9 +176,9 @@ export function assignObservableAndProxy(
       // console.log("working with =>", helpers.rootEvent, "key =>", key);
       /*
        * eventsObject will be empty at every assignObservableAndProxy call.
-       * Because every assignObservableAndProxy create its own event, add it to eventsObject and pass it
+       * Because every assignObservableAndProxy creates its own event, add it to eventsObject and pass it
        * to createProxyValidator.
-       * We choose using Object instead of array, so when dispatching, we will just
+       * We choose to use Object instead of an array, so when dispatching, we will just
        * dispatch the relevant key is the object, instead of filtering the array.
        *
        * eventsObject will contain possible event with the current key
@@ -189,14 +189,16 @@ export function assignObservableAndProxy(
        * Let take this store: store = {data:{other: new Map(), value: 45}}.
        * Available target for the moment are
        * "data"
-       * "data.other" // here other is a Map, but we can not go inside that map for the moment.
-       * "data.value"
-       * So when found an event for data.other. we lock it and use it for any changes inside the Map
+       * "data.other" // here other is a Map, but we cannot go inside that map for the moment.
+       * "Data.value"
+       * So when found an event for data.other.
+       * We lock it and use it for any changes inside the Map
        * */
 
       /*
        * The value of helpers.rootEvent is preserved and only changed on next loop.
-       * Because we do not override it. We ca not just use event, because we change event.
+       * Because we do not override it.
+       * We cannot just use event because we change event.
        * Remove comment from console.log to debug and understand
        * */
 
