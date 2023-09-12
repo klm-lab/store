@@ -1,0 +1,224 @@
+import { ALL } from "../../../constants/internal";
+import { InterceptOptionsType } from "../../../types";
+import { _checkInterceptorCall } from "../../developement";
+
+class StoreController {
+  readonly #events: any;
+  readonly #allListener: Set<any>;
+  readonly #allInterceptors: Set<any>;
+  readonly #interceptors: any;
+
+  constructor() {
+    this.#events = {};
+    this.#allListener = new Set();
+    this.#allInterceptors = new Set();
+    this.#interceptors = {};
+  }
+
+  createStoreEvent(store: any, key: string) {
+    this.#generateListenersEvent(store);
+    this.#generateInterceptorsEvent(store, key);
+  }
+
+  #generateListenersEvent(store: any) {
+    Object.keys(store).forEach((k) => {
+      this.#events[k] = new Set();
+    });
+  }
+  #generateInterceptorsEvent(store: any, key: string) {
+    if (store && store.constructor.name === "Object") {
+      Object.keys(store).forEach((k) => {
+        const event = key !== "" ? `${key}.${k}` : (`${k}` as string);
+        this.#interceptors[event] = new Set();
+        this.#generateInterceptorsEvent(store[k], event);
+      });
+    }
+  }
+
+  subscribe(event: string, listener: any) {
+    return this.#handleSubscribe(event, listener);
+  }
+
+  registerInterceptor(event: string, listener: any) {
+    return this.#handleInterceptorRegistering(event, listener);
+  }
+
+  #listenerEventByKey(event: string, callback: any) {
+    const eventTab = event.split(".");
+    callback(eventTab[0]);
+  }
+
+  #interceptorEventsByKey(event: string, action: any) {
+    const eventTab = event.split(".");
+    let oldE = "";
+    eventTab.forEach((e) => {
+      oldE = oldE === "" ? e : `${oldE}.${e}`;
+      action(oldE, oldE === event);
+    });
+  }
+
+  #handleInterceptorRegistering(event: string, listener: any) {
+    if (event === ALL) {
+      this.#allInterceptors.add(listener);
+      return () => this.#allInterceptors.delete(listener);
+    }
+    this.#interceptors[event].add(listener);
+    return () => this.#interceptors[event].delete(listener);
+  }
+
+  #handleSubscribe(event: string, listener: any) {
+    if (event === ALL) {
+      this.#allListener.add(listener);
+      return () => this.#allListener.delete(listener);
+    }
+    this.#listenerEventByKey(event, (key: string) => {
+      this.#events[key].add(listener);
+    });
+    return () => {
+      this.#listenerEventByKey(event, (key: string) => {
+        this.#events[key].delete(listener);
+      });
+    };
+  }
+
+  #dispatch(event: string) {
+    if (this.#allListener.size > 0) {
+      this.#allListener.forEach((listener: any) => listener());
+    }
+
+    this.#listenerEventByKey(event, (key: string) => {
+      this.#events[key].forEach((listener: any) => listener());
+    });
+  }
+
+  handleDispatch(event: string, options: InterceptOptionsType) {
+    this.#handleInterceptors(event, options);
+  }
+
+  #callInterceptor(
+    event: string,
+    listener: any,
+    options: InterceptOptionsType
+  ) {
+    listener({
+      intercepted: {
+        value: options.value,
+        state: options.state,
+        key: options.key,
+        action: options.action,
+        event
+      },
+      allowAction: () => {
+        options.allowAction(options.value);
+        this.#dispatch(event);
+      },
+      override: {
+        value: (value?: any) => {
+          _checkInterceptorCall(options, "override.value");
+          options.allowAction(value ?? options.value);
+          this.#dispatch(event);
+        },
+        key: (key?: any) => {
+          _checkInterceptorCall(options, "override.key", true);
+          options.overrideKey(key ?? options.key);
+          this.#dispatch(event);
+        },
+        keyAndValue: (key?: any, value?: any) => {
+          _checkInterceptorCall(options, "override.keyAndValue", true);
+          options.overrideKeyAndValue(
+            key ?? options.key,
+            value ?? options.value
+          );
+          this.#dispatch(event);
+        }
+      },
+      rejectAction: () => void 0
+    });
+  }
+
+  #callInterceptorFather(
+    event: string,
+    listener: any,
+    options: InterceptOptionsType,
+    next: any
+  ) {
+    listener({
+      intercepted: {
+        value: options.value,
+        state: options.state,
+        key: options.key,
+        action: options.action,
+        event
+      },
+      allowAction: next,
+      override: {
+        value: (value?: any) => {
+          _checkInterceptorCall(options, "override.value");
+          options.allowAction(value ?? options.value);
+        },
+        key: (key?: any) => {
+          _checkInterceptorCall(options, "override.key", true);
+          options.overrideKey(key ?? options.key);
+          this.#dispatch(event);
+        },
+        keyAndValue: (key?: any, value?: any) => {
+          _checkInterceptorCall(options, "override.keyAndValue", true);
+          options.overrideKeyAndValue(
+            key ?? options.key,
+            value ?? options.value
+          );
+          this.#dispatch(event);
+        }
+      },
+      rejectAction: () => void 0
+    });
+  }
+
+  #handleInterceptors(event: string, options: InterceptOptionsType) {
+    // const next = () => {
+    //   if (!(event in this.#interceptors)) {
+    //     options.allowAction(options.value);
+    //     return this.#dispatch(event);
+    //   }
+    //   this.#interceptors[event].forEach((listener: any) => {
+    //     this.#callInterceptor(event, listener, options);
+    //   });
+    // };
+    // if (this.#allInterceptors.size > 0) {
+    //   this.#allInterceptors.forEach((listener: any) => listener());
+    // }
+
+    //const calledInterceptors = new Set();
+    //console.log(event, this.#interceptors);
+    const task = (event: string) => {
+      this.#interceptorEventsByKey(event, (key: string, isLast: boolean) => {
+        // console.log(key);
+        if (this.#interceptors[key].size > 0) {
+          this.#interceptors[key].forEach((listener: any) => {
+            // if (!calledInterceptors.has(listener)) {
+            //   calledInterceptors.add(listener);
+            if (isLast) {
+              this.#callInterceptor(event, listener, options);
+            } else {
+              this.#callInterceptorFather(event, listener, options, () =>
+                task(event.replace(key + ".", ""))
+              );
+            }
+            // }
+          });
+        }
+      });
+    };
+    task(event);
+    return;
+    // if (calledInterceptors.size > 0) {
+    //   calledInterceptors.clear();
+    //   return;
+    // }
+
+    options.allowAction(options.value);
+    this.#dispatch(event);
+  }
+}
+
+export { StoreController };

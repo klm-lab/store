@@ -1,6 +1,13 @@
-import { ALL, GROUP, SLICE } from "../../constants/internal";
+import {
+  ALL,
+  GROUP,
+  INTERCEPTION,
+  SLICE,
+  SUBSCRIPTION
+} from "../../constants/internal";
 import type {
   ChangeHandlerType,
+  EventType,
   InterceptOptionsType,
   StoreParamsType,
   StoreType,
@@ -359,13 +366,39 @@ export function getData(
   );
 }
 
-export function getEventAndPath(target?: string) {
+export function getEventAndPath(
+  eventType: EventType,
+  storeType: StoreType,
+  target?: string
+) {
   const paths = createPath(target);
-  const EVENT = target ?? ALL;
-  return {
-    event: EVENT,
-    paths
-  };
+  const firstKey = paths[0];
+  const customGroupPath = paths[1];
+  let canSubscribe = true;
+  let event = "";
+  if (eventType === SUBSCRIPTION) {
+    if (storeType === "slice") {
+      canSubscribe = firstKey !== "_A";
+      event = firstKey ? (firstKey === "_D" ? ALL : firstKey) : ALL;
+    }
+    if (storeType === "group") {
+      canSubscribe = customGroupPath !== "_A";
+      event = firstKey ? (customGroupPath === "_D" ? ALL : firstKey) : ALL;
+    }
+  }
+  if (eventType === INTERCEPTION) {
+    if (storeType === "slice") {
+      canSubscribe = firstKey !== "_A";
+      event = target ? (firstKey === "_D" ? ALL : target) : ALL;
+    }
+    if (storeType === "group") {
+      canSubscribe = customGroupPath !== "_A";
+      event = target ? (customGroupPath === "_D" ? ALL : target) : ALL;
+    }
+    // event = target ?? ALL;
+  }
+
+  return { event, paths, canSubscribe };
 }
 
 function sendDataWithMemo(
@@ -373,11 +406,14 @@ function sendDataWithMemo(
   callback: any,
   storeParams: StoreParamsType
 ) {
-  const { storeController, storeType } = storeParams;
-  const { event: EVENT, paths } = getEventAndPath(event);
+  const { storeController } = storeParams;
+  const {
+    event: EVENT,
+    paths,
+    canSubscribe
+  } = getEventAndPath(SUBSCRIPTION, storeParams.storeType, event);
   let snapShot = getData(paths, storeParams);
-  const subscribe = storeType === GROUP ? paths[1] : paths[0];
-  if (subscribe === "_A") {
+  if (!canSubscribe) {
     return () => void 0;
   }
   return storeController.subscribe(EVENT, () => {
@@ -400,7 +436,14 @@ export function attachEvent(store: any, storeParams: StoreParamsType) {
   };
   store.intercept = function (event: string, callback: any) {
     _checkListenToEvent(event, callback, storeParams);
-    const { event: EVENT } = getEventAndPath(event);
+    const { event: EVENT, canSubscribe } = getEventAndPath(
+      INTERCEPTION,
+      storeParams.storeType,
+      event
+    );
+    if (!canSubscribe) {
+      return () => void 0;
+    }
     const { storeController } = storeParams;
     return storeController.registerInterceptor(EVENT, callback);
   };

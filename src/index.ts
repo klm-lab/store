@@ -6,12 +6,13 @@ import {
   finalizeStore
 } from "./helpers/util";
 import { _checkStoreTarget } from "./helpers/developement";
+import { SUBSCRIPTION } from "./constants/internal";
 
 function createStore<S>(store: S): Store<S> {
   const newStore = getNewStore(store);
   function useVanillaStore(target?: string) {
     _checkStoreTarget(target);
-    const { paths } = getEventAndPath(target);
+    const { paths } = getEventAndPath(SUBSCRIPTION, newStore.storeType, target);
     return getData(paths, newStore);
   }
   useVanillaStore.dispatcher = newStore.store.actions;

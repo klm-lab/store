@@ -95,7 +95,7 @@ class Store {
         }
       }
     }
-    this._storeController.createStoreEvent(this._store, "");
+    // this._storeController.createStoreEvent(this._store, "");
   }
 
   initPrivate(params: any) {
@@ -131,7 +131,7 @@ class Store {
         return actions;
       };
     }
-    this._storeController.createStoreEvent(this._privateStore, "");
+    //this._storeController.createStoreEvent(this._privateStore, "");
   }
 }
 

@@ -8,7 +8,7 @@ import {
   finalizeStore
 } from "../helpers/util";
 import { _checkStoreTarget } from "../helpers/developement";
-import { GROUP } from "../constants/internal";
+import { GROUP, SUBSCRIPTION } from "../constants/internal";
 
 function createStore<S>(store: S): Store<S> {
   const newStore = getNewStore(store);
@@ -25,18 +25,22 @@ function createStore<S>(store: S): Store<S> {
 function useStore(storeParams: StoreParamsType, target?: string) {
   const { storeType, storeController } = storeParams;
 
-  const [paths, memoizedState, EVENT] = useMemo(() => {
-    const { paths, event } = getEventAndPath(target);
-    return [paths, getData(paths, storeParams), event];
+  const [paths, memoizedState, EVENT, canSubscribe] = useMemo(() => {
+    const { paths, event, canSubscribe } = getEventAndPath(
+      SUBSCRIPTION,
+      storeType,
+      target
+    );
+    return [paths, getData(paths, storeParams), event, canSubscribe];
   }, [target]);
 
   /*
    * We can create the snapShot like this
    * let snapShot = getData({ paths, ...userParams }, storeParams);
    * But since this hook will be called at each render, let's memoized the snapShot value.
-   * We do not even return directly the snapShot to user. One more reason to memoize it.
+   * We do not even directly return the snapShot to user. One more reason to memoize it.
    * We use the snapShot inside getSnapshot to keep same reference and avoid infinite render since useSyncExternalStore
-   * call getSnapshot multiple time, I guess for stability reason
+   * call getSnapshot multiple times, I guess for stability reason
    * */
   let snapShot = memoizedState;
 
@@ -80,8 +84,7 @@ function useStore(storeParams: StoreParamsType, target?: string) {
 
   const dispatchData = useCallback(
     function (callback: any) {
-      const subscribe = storeType === GROUP ? paths[1] : paths[0];
-      if (subscribe === "_A") {
+      if (!canSubscribe) {
         return () => void 0;
       }
       return storeController.subscribe(EVENT, callback);

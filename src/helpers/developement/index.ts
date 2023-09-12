@@ -153,7 +153,6 @@ function checkConnectionToStore(result: any, paths: string[], p: string) {
 }
 
 function utilError(options: ErrorType) {
-  console.log("called error");
   console.error(options.name, "\n\n", options.message, "\n");
   throw options;
 }

@@ -37,8 +37,8 @@ type DataOrActionsKeyTypes<S> = {
  * _A is to type the result as chainable actions and _D as all data
  * */
 type TargetType<S> = GetStoreType<S> extends "group"
-  ? NestedKeyTypes<S> | DataOrActionsKeyTypes<S> | "all"
-  : NestedKeyTypes<S> | "_A" | "_D" | "all";
+  ? NestedKeyTypes<S> | DataOrActionsKeyTypes<S> | "*"
+  : NestedKeyTypes<S> | "_A" | "_D" | "*";
 
 /* Return list a key that are not function.
  * We cast the result as [keyof S] to
@@ -177,6 +177,8 @@ type CustomSuggestionType<S, K> = K extends "_A"
   ? FunctionChainType<S>
   : K extends "_D"
   ? DataOnlyType<S>
+  : K extends "*"
+  ? S
   : never;
 
 type StoreEvent = "change";
@@ -311,12 +313,22 @@ type StringObjectType = {
   [k in string]: string;
 };
 
+type EventType = "subscription" | "interception";
+type InterceptorActionsType =
+  | ""
+  | "allowAction"
+  | "override.value"
+  | "override.key"
+  | "override.keyAndValue";
+
 export type {
   Store,
   StoreDataAndActionsType,
   StoreParamsType,
   ErrorType,
   StoreType,
+  EventType,
+  InterceptorActionsType,
   InterceptOptionsType,
   InterceptActionType,
   ChangeHandlerType,
