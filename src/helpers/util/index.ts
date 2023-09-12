@@ -377,21 +377,21 @@ export function getEventAndPath(
   let canSubscribe = true;
   let event = "";
   if (eventType === SUBSCRIPTION) {
-    if (storeType === "slice") {
+    if (storeType === SLICE) {
       canSubscribe = firstKey !== "_A";
       event = firstKey ? (firstKey === "_D" ? ALL : firstKey) : ALL;
     }
-    if (storeType === "group") {
+    if (storeType === GROUP) {
       canSubscribe = customGroupPath !== "_A";
       event = firstKey ? (customGroupPath === "_D" ? ALL : firstKey) : ALL;
     }
   }
   if (eventType === INTERCEPTION) {
-    if (storeType === "slice") {
+    if (storeType === SLICE) {
       canSubscribe = firstKey !== "_A";
       event = target ? (firstKey === "_D" ? ALL : target) : ALL;
     }
-    if (storeType === "group") {
+    if (storeType === GROUP) {
       canSubscribe = customGroupPath !== "_A";
       event = target ? (customGroupPath === "_D" ? ALL : target) : ALL;
     }

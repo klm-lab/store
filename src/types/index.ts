@@ -178,7 +178,7 @@ type CustomSuggestionType<S, K> = K extends "_A"
   : K extends "_D"
   ? DataOnlyType<S>
   : K extends "*"
-  ? S
+  ? DataOnlyType<S> & FunctionChainType<S>
   : never;
 
 type StoreEvent = "change";
