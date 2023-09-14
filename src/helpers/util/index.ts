@@ -15,12 +15,12 @@ import type {
 } from "../../types";
 import { Store, StoreController } from "../store";
 import {
-  _checkListenToEvent,
+  _checkGroupStoreRootObject,
+  _checkListenEvent,
   _checkNull,
   _checkOnEvent,
   _validateStore,
-  _warnProdNodeENV,
-  _utilError
+  _warnProdNodeENV
 } from "../developement";
 import { checkReWriteStoreAndGetResult, createPath } from "../commonProdDev";
 import { ObservableSet, ObservableMap } from "../observable";
@@ -80,12 +80,28 @@ function createProxyValidator(
   event: StringObjectType,
   storeController: StoreController
 ) {
-  // console.warn("create proxy", event);
   return {
     set: function (state: any, key: any, value: any) {
       if (!isSame(state[key], value)) {
+        /* The correctEvent is find like this.
+         * If event[key] exists, that means,
+         * For ex: {data: {value: 10}} has a change in 'value', event will be {value: "data.value.data"}
+         * Then event[key] exist and correctEvent with be "data.value.data".
+         * If it doesn't exist we checked if some event is locked.
+         * For example : {data: {value: []}}. Data is an array and the key of that array will be 0, 1 , 2 ...
+         * event["0"] will never exist in that case. So we take the locked event which is lock to value. and we dispatch
+         * 'data.value'.
+         * Something for empty object
+         * Ex: data = {};
+         * then {}[someKey] doesn't exist so, we take the locked one.
+         *
+         * And now if the locked one doesn't exist also, like here, {}[key],
+         * we take the key as event
+         * */
+        const correctEvent = event[key] ?? event.locked;
+        // console.log("sending correct event", correctEvent, state, key);
         handleChanges(
-          { event: event[key], state, key, value, action: "update" },
+          { event: correctEvent ?? key, state, key, value, action: "update" },
           storeController
         );
       }
@@ -129,6 +145,11 @@ function handleObservable(
   return element;
 }
 
+/*
+ * We create event with key and if you wonder why, it because of interceptor.
+ * Without interceptors won't work as expected. Interceptor must intercept specific key
+ * or all key if it is the user choice
+ * */
 export function assignObservableAndProxy(
   data: any,
   event: string,
@@ -139,21 +160,20 @@ export function assignObservableAndProxy(
     eventsObject: {} as StringObjectType
   }
 ) {
-  // console.log("entered with =>", event, helpers.rootEvent);
+  // console.log("entered with =>", event, helpers.rootEvent, typeof event);
   if (data && data.constructor.name === "Array") {
-    /* We can use .at here but for maximum compatibility, we will go with old way.
-     * We explicitly create eventsObject for an array because helpers.eventsObject is empty when
-     * we come here
-     */
-    const tabKey = event.split(".");
-    const key = tabKey[tabKey.length - 1];
+    /* Data is an array we locked the event
+     * to array holder, ex: {arr: []}, we locked event to 'arr'.
+     *  StoreController will always dispatch 'arr' for every action inside the array
+     * */
+    helpers.eventsObject.locked = event;
     return new Proxy(
       data,
-      createProxyValidator({ [key]: event }, storeController)
+      createProxyValidator(helpers.eventsObject, storeController)
     );
   }
   if (data && data.constructor.name === "Map") {
-    // console.log("map locked event", event);
+    // console.warn("locked map event", event);
     return handleObservable(
       data,
       new ObservableMap(storeController, event, true),
@@ -163,6 +183,7 @@ export function assignObservableAndProxy(
     );
   }
   if (data && data.constructor.name === "Set") {
+    // console.warn("locked set event", event);
     return handleObservable(
       data,
       new ObservableSet(storeController, event, true),
@@ -215,6 +236,12 @@ export function assignObservableAndProxy(
         assignObservableAndProxy(value, event, storeController, lockEvent)
       ];
     });
+    /* Entries are empty so, we locked the event
+     * to nothing or default value ''. StoreController will dispatch 'all' listener
+     * */
+    if (entries.length <= 0) {
+      helpers.eventsObject.locked = event;
+    }
     return new Proxy(
       Object.fromEntries(entries),
       createProxyValidator(helpers.eventsObject, storeController)
@@ -245,36 +272,16 @@ export function removeObservableAndProxy(data: any) {
 }
 
 export function getStoreType(store: any): StoreType {
-  let storeType: string = SLICE;
-  if (typeof store === "undefined" || store === null) {
-    _utilError({
-      name: `Creating store`,
-      message: `The store is empty`,
-      state: store
-    });
-  }
-
-  if (store?.constructor?.name !== "Object") {
-    _utilError({
-      name: `Creating store`,
-      message: `The store is not an object`,
-      state: store
-    });
-  }
+  let storeType: string = GROUP;
   const STORE_KEYS = Object.keys(store);
   for (let i = 0; i < STORE_KEYS.length; i++) {
-    if (
-      store[STORE_KEYS[i]] !== null &&
-      store[STORE_KEYS[i]].constructor.name === "Object"
-    ) {
-      storeType = GROUP;
-    } else {
-      if (typeof store[STORE_KEYS[i]] === "function") {
-        storeType = SLICE;
-        break;
-      }
+    if (typeof store[STORE_KEYS[i]] === "function") {
+      storeType = SLICE;
+      break;
     }
   }
+  // we check if key in store is an object
+  storeType === GROUP && _checkGroupStoreRootObject(store);
 
   return storeType as StoreType;
 }
@@ -345,19 +352,19 @@ export function getData(
 
   const storeKey = paths[0];
 
-  if (storeKey === "_D" && storeType === SLICE) {
+  if (storeKey === "_D") {
     return removeObservableAndProxy(store.store);
   }
 
-  if (storeKey === "_A" && storeType === SLICE) {
+  if (storeKey === "_A") {
     return store.actions;
   }
 
-  if (paths[1] === "_A") {
+  if (paths[1] === "_A" && storeType === GROUP) {
     return isSnapShot ? store.actions : store.actions[storeKey];
   }
 
-  if (paths[1] === "_D") {
+  if (paths[1] === "_D" && storeType === GROUP) {
     return isSnapShot
       ? removeObservableAndProxy(store.store)
       : removeObservableAndProxy(store.store[storeKey]);
@@ -384,8 +391,12 @@ export function getEventAndPath(
       event = firstKey ? (firstKey === "_D" ? ALL : firstKey) : ALL;
     }
     if (storeType === GROUP) {
-      canSubscribe = customGroupPath !== "_A";
-      event = firstKey ? (customGroupPath === "_D" ? ALL : firstKey) : ALL;
+      canSubscribe = firstKey !== "_A" && customGroupPath !== "_A";
+      event = firstKey
+        ? customGroupPath === "_D" || firstKey === "_D"
+          ? ALL
+          : firstKey
+        : ALL;
     }
   }
   if (eventType === INTERCEPTION) {
@@ -394,12 +405,14 @@ export function getEventAndPath(
       event = target ? (firstKey === "_D" ? ALL : target) : ALL;
     }
     if (storeType === GROUP) {
-      canSubscribe = customGroupPath !== "_A";
-      event = target ? (customGroupPath === "_D" ? ALL : target) : ALL;
+      canSubscribe = firstKey !== "_A" && customGroupPath !== "_A";
+      event = target
+        ? customGroupPath === "_D" || firstKey === "_D"
+          ? ALL
+          : target
+        : ALL;
     }
-    // event = target ?? ALL;
   }
-
   return { event, paths, canSubscribe };
 }
 
@@ -429,15 +442,15 @@ function sendDataWithMemo(
 
 export function attachEvent(store: any, storeParams: StoreParamsType) {
   store.on = function (event: string, callback: any) {
-    _checkOnEvent(event);
+    _checkOnEvent(event, callback);
     return sendDataWithMemo(undefined, callback, storeParams);
   };
-  store.listenTo = function (event: string, callback: any) {
-    _checkListenToEvent(event, callback, storeParams);
+  store.listen = function (event: string, callback: any) {
+    _checkListenEvent(event, callback, storeParams);
     return sendDataWithMemo(event, callback, storeParams);
   };
   store.intercept = function (event: string, callback: any) {
-    _checkListenToEvent(event, callback, storeParams);
+    _checkListenEvent(event, callback, storeParams);
     const { event: EVENT, canSubscribe } = getEventAndPath(
       INTERCEPTION,
       storeParams.storeType,
@@ -479,10 +492,10 @@ export function finalizeStore(store: any, storeParams: StoreParamsType) {
 
 export function getNewStore<S>(store: S): StoreParamsType {
   _warnProdNodeENV();
+  _validateStore(store);
   const storeType = getStoreType(store);
   const appStore = new Store();
   if (storeType === GROUP) {
-    _validateStore(store);
     appStore.init(store);
     return {
       storeType,

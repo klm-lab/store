@@ -37,8 +37,8 @@ type DataOrActionsKeyTypes<S> = {
  * _A is to type the result as chainable actions and _D as all data
  * */
 type TargetType<S> = GetStoreType<S> extends "group"
-  ? NestedKeyTypes<S> | DataOrActionsKeyTypes<S> | "*"
-  : NestedKeyTypes<S> | "_A" | "_D" | "*";
+  ? NestedKeyTypes<S> | "*" | "_A" | "_D" | DataOrActionsKeyTypes<S>
+  : NestedKeyTypes<S> | "*" | "_A" | "_D";
 
 /* Return list a key that is not function.
  * We cast the result as [keyof S] to
@@ -293,7 +293,7 @@ type Store<S> = {
     event: StoreEvent,
     callback: (store: FunctionChainType<S> & DataOnlyType<S>) => void
   ) => () => void;
-  listenTo: <TargetKey>(
+  listen: <TargetKey>(
     event: TargetKey extends TargetType<S> ? TargetKey : TargetType<S>,
     callback: (data: StoreOutputType<S, TargetKey>) => void
   ) => () => void;

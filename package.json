@@ -32,7 +32,6 @@
     "start": "npm run clean && npm run lint && concurrently npm:build:webpack:dev-w npm:build:webpack:prod-w npm:build:webpack:dev:react-w npm:build:webpack:prod:react-w npm:build:dts",
     "prettier": "prettier ./src --write",
     "lint": "eslint ./src --ext .ts",
-    "test": "echo \"Error: no test specified\" && exit 1",
     "bpv": "npm version preminor --no-git-tag-version",
     "clean": "npm run clean:lib:win && npm run clean:lib:unix",
     "clean:temp": "npm run clean:temp:win && npm run clean:temp:unix",
@@ -43,7 +42,9 @@
     "clean:temp:win": "npm run clean:check:win || , if exist temp rmdir /Q /S temp",
     "clean:temp:unix": "npm run clean:check:unix || rm -rf temp",
     "size": "size-limit",
-    "npm:pack": "npm pack"
+    "npm:pack": "npm pack",
+    "test": "vitest",
+    "test-coverage": "vitest run --coverage"
   },
   "repository": {
     "type": "git",
@@ -63,6 +64,7 @@
     "@types/webpack": "^5.28.2",
     "@typescript-eslint/eslint-plugin": "^6.3.0",
     "@typescript-eslint/parser": "^6.3.0",
+    "@vitest/coverage-v8": "^0.34.4",
     "concurrently": "^8.2.1",
     "copy-webpack-plugin": "^11.0.0",
     "dts-bundle-generator": "^8.0.1",
@@ -73,6 +75,7 @@
     "size-limit": "^8.2.6",
     "ts-loader": "^9.4.4",
     "typescript": "^5.2.2",
+    "vitest": "^0.34.4",
     "webpack": "^5.88.2",
     "webpack-cli": "^5.1.4"
   },

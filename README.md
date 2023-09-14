@@ -648,7 +648,7 @@ The store your callback received contains everything you need to consume or disp
 ```js
 const myStore = createStore(...);
 
-myStore.listenTo('data.content.value', (data) => {
+myStore.listen('data.content.value', (data) => {
   // do what ever you want with your data,
 })
 ```
@@ -661,7 +661,7 @@ When listening to a specific part of your store, you can get a snapshot of your 
 const myStore = createStore(...);
 
 // Listen to value changes
-myStore.listenTo('data.content.value', (value) => {
+myStore.listen('data.content.value', (value) => {
   // Get a snapshot
   const snapshot = myStore();
   console.log(snapshot.data.otherData)
@@ -692,7 +692,7 @@ So you can use a function `getSnapshot` to get a snapShot of your store<br>
 const myStore = createStore(...);
 
 // Listen to value changes
-myStore.listenTo('data.content.value', (value) => {
+myStore.listen('data.content.value', (value) => {
   // Get a snapshot or actions
   const snapshot = myStore.getSnapshot();
   const data = myStore.getDataSnapshot();
@@ -703,7 +703,7 @@ myStore.listenTo('data.content.value', (value) => {
 All event listener return an unsubscribe function
 
 ```js
-const unsubscribe = myStore.listenTo('data.someAction', (action) => {
+const unsubscribe = myStore.listen('data.someAction', (action) => {
   // do what ever you want with your action,
   // you can also dispatch
 })
@@ -715,31 +715,32 @@ And you can also listen to all Data or all actions
 
 ```js
 // Listen to all Data changes
-myStore.listenTo('_D', (action) => {
+myStore.listen('_D', (action) => {
   // do some stuff with your data
 })
 
 // Listen to all Data changes
-myStore.listenTo('_A', (action) => {
+myStore.listen('_A', (action) => {
   // do what ever you want with your action,
   // you can also dispatch
 })
 ```
 
-Or if your store is a group. See create a group store <a href="#group-store">HERE</a>
+Or if your store is a group, and you want all data or all actions from some key, 
 
 ```js
 // Listen to all Data changes
-myStore.listenTo('groupKey._D', (action) => {
+myStore.listen('groupKey._D', (action) => {
   // do some stuff with your data
 })
 
 // Listen to all Data changes
-myStore.listenTo('groupKey._A', (action) => {
+myStore.listen('groupKey._A', (action) => {
   // do what ever you want with your action,
   // you can also dispatch
 })
 ```
+See create a group store <a href="#group-store">HERE</a>
 
 ## Interceptors
 
@@ -890,6 +891,8 @@ You will never intercept change on `data.someThing` or `data.content.something`.
 You can add many interceptors as you want with once condition. Only one interceptor per value.
 
 ```js
+myStore.intercept("*", (store) => {
+}) // ✅ this one is kept
 myStore.intercept("data", (store) => {
 }) // ✅ this one is kept
 myStore.intercept("data.content", (store) => {
@@ -906,6 +909,20 @@ myStore.intercept("data", (store) => {
 myStore.intercept("data", (store) => {
 }) // ✅ this one is kept
 ```
+
+```js
+myStore.intercept("*", (store) => {
+}) // ❗ is override
+myStore.intercept("_D", (store) => {
+}) // ✅ this one is kept
+```
+```js
+myStore.intercept("_D", (store) => {
+}) // ❗ is override
+myStore.intercept("*", (store) => {
+}) // ✅ this one is kept
+```
+`*` and `_D` is the same thing. They both intercept all data changes
 
 #### How we call interceptors
 
@@ -976,15 +993,22 @@ Skip this step if you are using event listener. Every listener is free from HOOK
 ## Available tools and options
 
 * `createStore` Let you create a store by passing a slice or a group of data and actions.
-* `_A` A key that can be passed to your slice store in order to get a PURE DISPATCHER with all actions in that store.
+* `dispatcher` A property attached to your store that lets you dispatch actions from any file.
+* `getSnapshot` A Function attached to your store that lets you get a snapshot of your store at any time.
+* `getDataSnapshot` A Function attached to your store that lets you get a snapshot that only contain the data of your store at any time.
+* `getActions` A Function attached to your store that lets you get all actions in your store at any time.
+* `on` A Function attached to your store that lets listen to all `change` in your store.
+* `listen` A Function attached to your store that lets you listen to changes in a specific part of your store.
+* `intercept` A Function attached to your store that lets you intercept changes in your store.
+* `_A` A key that can be passed to your store in order to get a PURE DISPATCHER with all actions in that store.
 * `groupKey._A` A key that can be passed to your grouped store in order to get a PURE DISPATCHER with all actions in
-  that store.
-* `._D` A key that can be passed to your slice store in order to get all data in that store making it a PURE DATA
+  that store. `groupKey` is the name of your group
+* `._D` A key that can be passed to your store in order to get all data in that store making it a PURE DATA
   CONSUMER.
 * `groupKey._D` A key that can be passed to your grouped store in order to get all data in that store making it a PURE
-  DATA CONSUMER.
+  DATA CONSUMER. `groupKey` is the name of your group
 * `*` A key that can be passed to your store in order to get everything in that store. It is similar to passing
-  nothing. You can also use it to intercept all changes in your store. 
+  nothing. You can also use it to intercept, or listen to all changes in your store. 
 
 <!-- LICENSE -->
 
