@@ -4,28 +4,44 @@ import { expect, test } from "vitest";
 import { createStore } from "../src";
 import { E_T, ERROR_TEXT } from "../src/constants/internal";
 
+test("Test use store with locked event", () => {
+  const emptyStore = createStore({
+    add: (store) => {
+      store.newProp = new Map().set("lock", { data: false });
+      store.gh = {};
+    },
+    update: (store) => {
+      store.newProp.get("lock").data = true;
+      store.newProp.get("lock").newPropInsideMap = 12;
+    }
+  });
+  // Testing newProp
+  emptyStore.dispatcher.add();
+  expect(emptyStore("newProp").get("lock")).toMatchObject({ data: false });
+  emptyStore.dispatcher.update();
+  expect(emptyStore("newProp").get("lock").data).toBe(true);
+  expect(emptyStore("newProp").get("lock")).toHaveProperty("newPropInsideMap");
+});
 test("Test use store", () => {
   const emptyStore = createStore({ add: (store) => (store.newProp = 12) });
   const myStore = createStore({
     value: 0,
     arr: [],
     emptyMap: new Map(),
-    dataMAp: new Map().set("t", true),
+    dataMAp: new Map().set("t", true).set("my", false),
     emptySet: new Set(),
-    dataSet: new Set().add("value"),
+    dataSet: new Set().add("value").add("otherValue"),
     func: (store, v) => (store.value += v),
     pushArr: (store) => store.arr.push("test"),
     setMap: (store) => store.emptyMap.set("test", "value"),
     addSet: (store) => store.emptySet.add("test set"),
     newArrayProp: (store) => (store.arrayProp = []),
     manipulateArray: (store, next) => next(store),
-    newObjProp: (store) =>
-      (store.objProp = {
-        fgfg: {
-          vb: 12,
-          map: new Map().set("n", new Set([12]))
-        }
-      })
+    deleteValueProp: (store) => delete store.value,
+    deleteInSet: (store) => store.dataSet.delete("value"),
+    deleteInMap: (store) => store.dataMAp.delete("t"),
+    clearInSet: (store) => store.dataSet.clear(),
+    clearInMap: (store) => store.dataMAp.clear()
   });
   const myGroupStore = createStore({
     group: {
@@ -85,4 +101,210 @@ test("Test use store", () => {
   });
   expect(myStore.getDataSnapshot().arrayProp).toContain("data");
   expect(myStore.getDataSnapshot().arrayProp).toContain(1);
+
+  // testing deletion
+  actions.deleteValueProp();
+  expect(myStore.getDataSnapshot()).not.toHaveProperty("value");
+  actions.deleteInSet();
+  expect(myStore.getDataSnapshot().dataSet).not.toContain("value");
+  actions.deleteInMap();
+  expect(myStore.getDataSnapshot().dataMAp).not.toContain("t");
+  actions.clearInSet();
+  expect(myStore.getDataSnapshot().dataSet.size).toBe(0);
+  actions.clearInMap();
+  expect(myStore.getDataSnapshot().dataMAp.size).toBe(0);
+});
+test("Test use store override", () => {
+  const myStore = createStore({
+    value: 0,
+    other: {
+      data: "it is gine"
+    },
+    dataMAp: new Map().set("t", true).set("my", { data: false }),
+    dataSet: new Set().add("value").add("otherValue"),
+    deleteValueProp: (store) => {
+      delete store.value;
+    },
+    deleteOther: (store) => {
+      delete store.other;
+    },
+    deleteInSet: (store) => store.dataSet.delete("value"),
+    deleteInMap: (store) => store.dataMAp.delete("t"),
+    clearInSet: (store) => store.dataSet.clear(),
+    clearInMap: (store) => store.dataMAp.clear()
+  });
+
+  const actions = myStore.getActions();
+
+  // testing deletion override
+  myStore.intercept("value", (store) => {
+    store.override.key("ok");
+  });
+
+  myStore.intercept("other", (store) => {
+    store.override.keyAndValue("ok");
+  });
+  actions.deleteValueProp();
+  expect(myStore.getDataSnapshot()).toHaveProperty("value");
+  expect(() => actions.deleteOther()).toThrowError(
+    ERROR_TEXT.CAN_NOT_BE_CALLED.replace(E_T, "override.keyAndValue")
+  );
+});
+
+test("Test use store override deletion in Map and Set", () => {
+  const myStore = createStore({
+    value: 0,
+    other: {
+      data: "it is gine"
+    },
+    toDelete: 10,
+    dataMAp: new Map().set("t", true).set("my", { data: false }),
+    dataMAp2: new Map().set("t", true).set("my", { data: false }),
+    dataSet: new Set().add("value").add("otherValue").add("ok"),
+    dataSet2: new Set().add("value2").add("otherValue2").add("ok"),
+    deleteData: (store) => {
+      delete store.toDelete;
+    },
+    updateMap: (store) => {
+      store.dataMAp.set("t", "ok");
+    },
+    updateMap2: (store) => {
+      store.dataMAp2.set("t", "ok");
+    },
+    clearMAp: (store) => {
+      store.dataMAp.clear();
+      store.dataMAp2.clear();
+    },
+    deleteInSet: (store) => {
+      store.dataSet.delete("value");
+      store.dataSet2.delete("value2");
+    },
+    deleteInMap: (store) => {
+      store.dataMAp.delete("t");
+      store.dataMAp2.delete("t");
+    },
+    clearInSet: (store) => store.dataSet.clear(),
+    clearInMap: (store) => store.dataMAp.clear()
+  });
+
+  const actions = myStore.getActions();
+
+  // testing deletion override
+  myStore.intercept("dataMAp", (store) => {
+    if (store.intercepted.action !== "clearInMap") {
+      store.override.key("newKey");
+    } else {
+      store.allowAction();
+    }
+  });
+
+  myStore.intercept("dataMAp2", (store) => {
+    if (store.intercepted.action !== "clearInMap") {
+      store.override.keyAndValue("newKey", 10);
+    } else {
+      store.allowAction();
+    }
+  });
+
+  myStore.intercept("dataSet", (store) => {
+    store.override.value("ok");
+  });
+
+  myStore.intercept("dataSet2", (store) => {
+    store.override.value("ok");
+  });
+
+  actions.updateMap();
+  actions.updateMap2();
+  expect(myStore.getDataSnapshot().dataMAp.get("newKey")).toBe("ok");
+  expect(myStore.getDataSnapshot().dataMAp.get("t")).toBe(true);
+  expect(myStore.getDataSnapshot().dataMAp2.get("newKey")).toBe(10);
+  expect(myStore.getDataSnapshot().dataMAp2.get("t")).toBe(true);
+  actions.deleteInMap();
+  expect(myStore.getDataSnapshot().dataMAp.get("t")).toBeDefined();
+  actions.deleteInSet();
+  expect(myStore.getDataSnapshot().dataSet).toContain("value");
+  expect(myStore.getDataSnapshot().dataSet2).toContain("value2");
+  expect(myStore.getDataSnapshot().dataSet2).not.toContain("ok");
+  actions.deleteData();
+  expect(myStore.getDataSnapshot()).not.toHaveProperty("toDelete");
+});
+
+test("Test use store with no override in set or map or obj when clearing or deleting data", () => {
+  const myStore = createStore({
+    data: 12,
+    other: 12,
+    dataMAp: new Map().set("t", true).set("my", { data: false }),
+    dataMAp2: new Map().set("t", true).set("my", { data: false }),
+    dataSet: new Set().add("value").add("otherValue").add("ok"),
+    dataSet2: new Set().add("value2").add("otherValue2"),
+    deleteData: (store) => {
+      delete store.data;
+    },
+    deleteOther: (store) => {
+      delete store.other;
+    },
+    updateMap: (store) => {
+      store.dataMAp.set("t", "ok");
+    },
+    updateMap2: (store) => {
+      store.dataMAp2.set("t", "ok");
+    },
+    clearMAp: (store) => {
+      store.dataMAp.clear();
+      store.dataMAp2.clear();
+    },
+    deleteInSet: (store) => {
+      store.dataSet.delete("value");
+    },
+    deleteInSet2: (store) => {
+      store.dataSet2.delete("value2");
+    },
+    deleteInMap: (store) => {
+      store.dataMAp.delete("t");
+      store.dataMAp2.delete("t");
+    },
+    clearInSet: (store) => store.dataSet.clear(),
+    clearInMap: (store) => store.dataMAp.clear()
+  });
+
+  myStore.intercept("dataMAp", (store) => {
+    store.override.key("newKey");
+  });
+
+  myStore.intercept("dataSet", (store) => {
+    store.override.key("ok");
+  });
+  //
+  myStore.intercept("dataSet2", (store) => {
+    store.override.keyAndValue("ok");
+  });
+  //
+  myStore.intercept("data", (store) => {
+    store.override.value("ok");
+  });
+
+  myStore.intercept("other", (store) => {
+    store.override.keyAndValue("ok");
+  });
+  //
+  const actions = myStore.getActions();
+  //
+  expect(() => actions.clearMAp()).toThrowError(
+    ERROR_TEXT.CAN_NOT_BE_CALLED.replace(E_T, "override.key")
+  );
+  expect(() => actions.deleteInSet()).toThrowError(
+    ERROR_TEXT.CAN_NOT_BE_CALLED.replace(E_T, "override.key")
+  );
+  expect(() => actions.deleteInSet2()).toThrowError(
+    ERROR_TEXT.CAN_NOT_BE_CALLED.replace(E_T, "override.keyAndValue")
+  );
+
+  expect(() => actions.deleteData()).toThrowError(
+    ERROR_TEXT.CAN_NOT_BE_CALLED.replace(E_T, "override.value")
+  );
+
+  expect(() => actions.deleteOther()).toThrowError(
+    ERROR_TEXT.CAN_NOT_BE_CALLED.replace(E_T, "override.keyAndValue")
+  );
 });

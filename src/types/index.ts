@@ -222,13 +222,11 @@ interface InterceptDataType<S, TargetKey> {
     key: any;
     event: string;
     value: any;
+    action: InterceptActionType;
     state: StoreOutputType<S, TargetKey>;
   };
-
   allowAction(): void;
-
   rejectAction(): void;
-
   override: OverrideType;
 }
 
@@ -246,8 +244,8 @@ type InterceptOptionsType = {
   key: any;
   action: InterceptActionType;
   allowAction: (value?: any) => void;
-  overrideKey: (key?: any) => void;
-  overrideKeyAndValue: (key?: any, value?: any) => void;
+  overrideKey?: (key?: any) => void;
+  overrideKeyAndValue?: (key?: any, value?: any) => void;
 };
 
 /*
@@ -338,7 +336,6 @@ type StringObjectType = {
 
 type EventType = "subscription" | "interception";
 type InterceptorActionsType =
-  | ""
   | "allowAction"
   | "override.value"
   | "override.key"

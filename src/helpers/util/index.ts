@@ -32,45 +32,34 @@ function handleChanges(
   const { event, state, key, value, action } = params;
   let options = {} as InterceptOptionsType;
   if (params.action === "update") {
+    const next = (options: InterceptOptionsType) => {
+      state[options.key] = assignObservableAndProxy(
+        options.value,
+        event,
+        storeController
+      );
+    };
     options = {
       value,
       key,
       state: removeObservableAndProxy(state),
       action: action,
-      overrideKey: (newKey: any) => {
-        state[newKey] = assignObservableAndProxy(value, event, storeController);
-      },
-      allowAction: (validatedValue: any) => {
-        state[key] = assignObservableAndProxy(
-          validatedValue,
-          event,
-          storeController
-        );
-      },
-      overrideKeyAndValue: (newKey: any, validatedValue: any) => {
-        state[newKey] = assignObservableAndProxy(
-          validatedValue,
-          event,
-          storeController
-        );
-      }
+      overrideKey: next,
+      allowAction: next,
+      overrideKeyAndValue: next
     };
   }
   if (params.action === "delete") {
+    const next = (options: InterceptOptionsType) => {
+      delete state[options.key];
+    };
     options = {
       value,
       key,
       state: removeObservableAndProxy(state),
       action: action,
-      overrideKey: (newKey: any) => {
-        delete state[newKey];
-      },
-      allowAction: () => {
-        delete state[key];
-      },
-      overrideKeyAndValue: (newKey: any) => {
-        delete state[newKey];
-      }
+      overrideKey: next,
+      allowAction: next
     };
   }
   storeController.handleDispatch(event, options);
@@ -108,9 +97,10 @@ function createProxyValidator(
       return true;
     },
     deleteProperty: (target: any, prop: any) => {
+      const correctEvent = event[prop] ?? event.locked;
       handleChanges(
         {
-          event: event[prop],
+          event: correctEvent ?? prop,
           state: target,
           key: prop,
           value: null,
@@ -402,15 +392,14 @@ export function getEventAndPath(
   if (eventType === INTERCEPTION) {
     if (storeType === SLICE) {
       canSubscribe = firstKey !== "_A";
-      event = target ? (firstKey === "_D" ? ALL : target) : ALL;
+      event = firstKey === "_D" ? ALL : (target as string);
     }
     if (storeType === GROUP) {
       canSubscribe = firstKey !== "_A" && customGroupPath !== "_A";
-      event = target
-        ? customGroupPath === "_D" || firstKey === "_D"
+      event =
+        customGroupPath === "_D" || firstKey === "_D"
           ? ALL
-          : target
-        : ALL;
+          : (target as string);
     }
   }
   return { event, paths, canSubscribe };
@@ -446,11 +435,11 @@ export function attachEvent(store: any, storeParams: StoreParamsType) {
     return sendDataWithMemo(undefined, callback, storeParams);
   };
   store.listen = function (event: string, callback: any) {
-    _checkListenEvent(event, callback, storeParams);
+    _checkListenEvent(event, callback, storeParams, SUBSCRIPTION);
     return sendDataWithMemo(event, callback, storeParams);
   };
   store.intercept = function (event: string, callback: any) {
-    _checkListenEvent(event, callback, storeParams);
+    _checkListenEvent(event, callback, storeParams, INTERCEPTION);
     const { event: EVENT, canSubscribe } = getEventAndPath(
       INTERCEPTION,
       storeParams.storeType,

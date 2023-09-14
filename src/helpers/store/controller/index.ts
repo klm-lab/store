@@ -170,7 +170,7 @@ class StoreController {
        * So, when the length is lower, the event is a priority. We need to override the oldInterceptor event with the new one.
        * For next check.
        *
-       * If the length is the same, then we keep the latest one
+       * If the length is the same and event is the same, then we keep the latest one
        *
        * And of course, if no listener is present, we just add the new one.
        * We increment the total of interceptors for later
@@ -182,7 +182,8 @@ class StoreController {
           this.#interceptors[key] = listener;
         }
         // Same length, same job, we can only keep one, and we will keep the latest one
-        if (this.#olderInterceptorEvent.length === event.length) {
+        //if (this.#olderInterceptorEvent.length === event.length) {
+        if (this.#olderInterceptorEvent === event) {
           this.#interceptors[key] = listener;
         }
       } else {
@@ -303,27 +304,24 @@ class StoreController {
   #dispatchControlledAction(
     event: string,
     interceptorAction: InterceptorActionsType,
-    options: any
+    options: InterceptOptionsType
   ) {
     if (interceptorAction === "allowAction") {
-      options.allowAction(options.value);
-      this.#dispatch(event);
+      options.allowAction(options);
     }
     if (interceptorAction === "override.value") {
       _checkInterceptorCall(options, interceptorAction);
-      options.allowAction(options.value);
-      this.#dispatch(event);
+      options.allowAction(options);
     }
     if (interceptorAction === "override.key") {
-      _checkInterceptorCall(options, interceptorAction, true);
-      options.overrideKey(options.key);
-      this.#dispatch(event);
+      _checkInterceptorCall(options, interceptorAction);
+      options.overrideKey && options.overrideKey(options);
     }
     if (interceptorAction === "override.keyAndValue") {
-      _checkInterceptorCall(options, interceptorAction, true);
-      options.overrideKeyAndValue(options.key, options.value);
-      this.#dispatch(event);
+      _checkInterceptorCall(options, interceptorAction);
+      options.overrideKeyAndValue && options.overrideKeyAndValue(options);
     }
+    this.#dispatch(event);
   }
 
   /*
@@ -335,7 +333,7 @@ class StoreController {
      * If they are not present. We just allow the action and dispatch the event
      * */
     if (this.#totalInterceptors <= 0) {
-      options.allowAction(options.value);
+      options.allowAction(options);
       this.#dispatch(event);
       return;
     }
@@ -403,8 +401,12 @@ class StoreController {
     /*
      * Before start anything, we first check if there is an interceptor for all data in the store.
      * If so, we call it first and then ask him to call other interceptors if they exist.
+     * If other interceptor share the same function, then they will not be called
      * */
+
     if (this.#interceptorForAll) {
+      // Add interceptor to called collection
+      calledInterceptors.add(this.#interceptorForAll);
       this.#callInterceptor(
         event,
         this.#interceptorForAll,
@@ -413,9 +415,8 @@ class StoreController {
       );
       return;
     }
-
     // We start everything
-    nextInterceptor("", { ...options });
+    nextInterceptor("allowAction", { ...options });
   }
 }
 

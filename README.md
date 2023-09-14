@@ -780,22 +780,34 @@ myStore.intercept("data.value", (store) => {
 * `intercepted.key`: Target key, (the key of the data that request changes)
 * `intercepted.value`: The new value
 * `intercepted.state`: The part of the store that request changes
+* `intercepted.action`: The current action:
+  * `update`: When you want to update something in your store
+  * `addInSet`: When you want to add something to a Set collection in your store
+  * `setInMap`: When you want to set something to a Map collection in your store
+  * `delete`: When you want to delete something in your store
+  * `deleteInSet`: When you want to delete something from a Set collection in your store
+  * `deleteInMap`: When you want to delete something from a Map collection in your store
+  * `clearInSet`: When you want to clear a Set collection in your store
+  * `clearInMap`: When you want to clear a Map collection in your store
 * `intercepted.event`: The intercepted event
 
 With that, let's do some control.
 
 ### Reject an action
 
+We want to reject any clear method from our Map collection inside our store
+
 ```js
-myStore.intercept("data.value", (store) => {
-  if (store.intercepted.value > someMaxValue) {
-    // We reject the action
+myStore.intercept("data.map", (store) => {
+  if (store.intercepted.action !== "clearInMap") {
+    store.allowAction();
+  } else {
     store.rejectAction()
   }
 })
 ```
 
-### Allow an action
+### Allow an action with condition
 
 ```js
 myStore.intercept("data.value", (store) => {
@@ -803,6 +815,8 @@ myStore.intercept("data.value", (store) => {
     // We allow the action
     store.allowAction()
   }
+  // This part is optional but you can add it
+  else store.rejectAction()
 })
 ```
 
@@ -969,6 +983,25 @@ Unless if it is what we want, we reject the action.<br>
 In the meantime, the second interceptor will never be called, because the line is brake and his hierarchic interceptor rejects the action
 for his safety.
 
+#### Interceptors issue ?
+My interceptor doesn't intercept anything.
+> [!IMPORTANT]<br>
+>If you fired an action before registering an interceptor, nothing will be intercepted
+
+```js
+// We fired the action ❌
+mystore.dispatcher.updateSomeValue();
+// We register the interceptor ❌
+mystore.intercept("value",(s)=> ...);
+```
+This will not work. Be sure to register all your interceptors before firing your actions
+```js
+// We register first ✅
+mystore.intercept("value",(s)=> ...);
+
+// And later we fired some action ✅
+mystore.dispatcher.updateSomeValue();
+```
 
 ## Environment
 

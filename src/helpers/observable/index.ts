@@ -1,6 +1,6 @@
 import { StoreController } from "../store";
 import { assignObservableAndProxy, removeObservableAndProxy } from "../util";
-import { _checkSet } from "../developement";
+import { InterceptOptionsType } from "../../types";
 
 class ObservableMap extends Map {
   readonly #event: string;
@@ -39,33 +39,33 @@ class ObservableMap extends Map {
         state: removeObservableAndProxy(this),
         key,
         action: "setInMap",
-        allowAction: (validatedValue: any) => {
+        allowAction: (options: InterceptOptionsType) => {
           super.set(
-            key,
+            options.key,
             assignObservableAndProxy(
-              validatedValue,
+              options.value,
               this.#event,
               this.#storeController,
               true
             )
           );
         },
-        overrideKey: (newKey: any) => {
+        overrideKey: (options: InterceptOptionsType) => {
           super.set(
-            newKey,
+            options.key,
             assignObservableAndProxy(
-              value,
+              options.value,
               this.#event,
               this.#storeController,
               true
             )
           );
         },
-        overrideKeyAndValue: (newKey: any, validatedValue: any) => {
+        overrideKeyAndValue: (options: InterceptOptionsType) => {
           super.set(
-            newKey,
+            options.key,
             assignObservableAndProxy(
-              validatedValue,
+              options.value,
               this.#event,
               this.#storeController,
               true
@@ -84,24 +84,28 @@ class ObservableMap extends Map {
       value: null,
       state: state,
       action: "clearInMap",
-      allowAction: super.clear,
-      overrideKey: () => void 0,
-      overrideKeyAndValue: () => void 0
+      allowAction: () => {
+        super.clear();
+      }
     });
   }
 
   delete(key: any) {
     const state = removeObservableAndProxy(this);
     this.#storeController.handleDispatch(this.#event, {
-      key: null,
+      key: key,
       value: null,
       state: state,
       action: "deleteInMap",
-      allowAction: () => {
-        super.delete(key);
+      allowAction: (options: InterceptOptionsType) => {
+        super.delete(options.key);
       },
-      overrideKey: super.delete,
-      overrideKeyAndValue: super.delete
+      overrideKey: (options: InterceptOptionsType) => {
+        super.delete(options.key);
+      },
+      overrideKeyAndValue: (options: InterceptOptionsType) => {
+        super.delete(options.key);
+      }
     });
     return true;
   }
@@ -143,19 +147,16 @@ class ObservableSet extends Set {
         value,
         state,
         action: "addInSet",
-        allowAction: (validatedValue: any) => {
+        allowAction: (options: InterceptOptionsType) => {
           super.add(
             assignObservableAndProxy(
-              validatedValue,
+              options.value,
               this.#event,
               this.#storeController,
               true
             )
           );
-        },
-        overrideKey: (key: any) => _checkSet({ key }, state),
-        overrideKeyAndValue: (key: any, newValue: any) =>
-          _checkSet({ key, value: newValue }, state)
+        }
       });
     }
     return this;
@@ -170,25 +171,20 @@ class ObservableSet extends Set {
       action: "clearInSet",
       allowAction: () => {
         super.clear();
-      },
-      overrideKey: (key?: any) => _checkSet({ key }, state),
-      overrideKeyAndValue: (key?: any, newValue?: any) =>
-        _checkSet({ key, value: newValue }, state)
+      }
     });
   }
 
-  delete(key: any) {
+  delete(value: any) {
     const state = removeObservableAndProxy(this);
     this.#storeController.handleDispatch(this.#event, {
       key: null,
-      value: null,
+      value,
       state: state,
       action: "deleteInSet",
-      allowAction: () => {
-        super.delete(key);
-      },
-      overrideKey: super.delete,
-      overrideKeyAndValue: super.delete
+      allowAction: (options: InterceptOptionsType) => {
+        super.delete(options.value);
+      }
     });
     return true;
   }

@@ -1,5 +1,5 @@
-import type { StoreParamsType } from "../../types";
-import { E_T, ERROR_TEXT, GROUP } from "../../constants/internal";
+import type { EventType, StoreParamsType } from "../../types";
+import { E_T, ERROR_TEXT, GROUP, SUBSCRIPTION } from "../../constants/internal";
 import { ErrorType, InterceptOptionsType } from "../../types";
 import { checkReWriteStoreAndGetResult, createPath } from "../commonProdDev";
 
@@ -74,7 +74,8 @@ function checkCallback(event: string, callback: any) {
 function checkListenEvent(
   event: string,
   callback: any,
-  storeParams: StoreParamsType
+  storeParams: StoreParamsType,
+  eventType: EventType
 ) {
   const { storeType } = storeParams;
   if (
@@ -86,7 +87,10 @@ function checkListenEvent(
   ) {
     _utilError({
       name: `Listen to event ${event}`,
-      message: ERROR_TEXT.NOT_VALID_EVENT
+      message:
+        eventType === SUBSCRIPTION
+          ? ERROR_TEXT.NOT_VALID_LISTEN_EVENT
+          : ERROR_TEXT.NOT_VALID_INTERCEPT_EVENT
     });
   }
 
@@ -114,42 +118,24 @@ function warnProdNodeENV() {
   }
 }
 
-function checkInterceptorCall(
-  options: InterceptOptionsType,
-  name: string,
-  key = false
-) {
-  if (key) {
-    if (["clearInSet", "clearInMap"].includes(options.action)) {
-      _utilError({
-        name: `Override when action is ${options.action}`,
-        message: ERROR_TEXT.CAN_NOT_BE_CALLED.replace(E_T, name)
-      });
-    }
-    return;
-  }
-  if (
-    [
+function checkInterceptorCall(options: InterceptOptionsType, name: string) {
+  const NOT_ALLOWED = {
+    "override.value": ["delete", "deleteInMap", "clearInSet", "clearInMap"],
+    "override.key": ["clearInSet", "clearInMap", "deleteInSet", "addInSet"],
+    "override.keyAndValue": [
       "delete",
-      "deleteInSet",
-      "deleteInMap",
       "clearInSet",
-      "clearInMap"
-    ].includes(options.action)
-  ) {
+      "clearInMap",
+      "deleteInSet",
+      "addInSet"
+    ]
+  } as any;
+  if (NOT_ALLOWED[name].includes(options.action)) {
     _utilError({
       name: `Override when action is ${options.action}`,
       message: ERROR_TEXT.CAN_NOT_BE_CALLED.replace(E_T, name)
     });
   }
-}
-
-function checkSet({ key }: any, state: any) {
-  _utilError({
-    name: `Override key ${key} in Set`,
-    message: ERROR_TEXT.NO_KEY_TO_OVERRIDE_SET,
-    state
-  });
 }
 
 function checkConnectionToStore(result: any, paths: string[], p: string) {
@@ -186,8 +172,6 @@ export const _warnProdNodeENV =
   process.env.NODE_ENV !== "production" ? warnProdNodeENV : () => void 0;
 export const _checkInterceptorCall =
   process.env.NODE_ENV !== "production" ? checkInterceptorCall : () => void 0;
-export const _checkSet =
-  process.env.NODE_ENV !== "production" ? checkSet : () => void 0;
 export const _checkConnectionToStore =
   process.env.NODE_ENV !== "production" ? checkConnectionToStore : () => void 0;
 export const _checkGroupStoreRootObject =
