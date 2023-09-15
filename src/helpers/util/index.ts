@@ -1,13 +1,6 @@
-import {
-  ALL,
-  GROUP,
-  INTERCEPTION,
-  SLICE,
-  SUBSCRIPTION
-} from "../../constants/internal";
+import { GROUP, SLICE } from "../../constants/internal";
 import type {
   ChangeHandlerType,
-  EventType,
   InterceptOptionsType,
   StoreParamsType,
   StoreType,
@@ -17,18 +10,16 @@ import { Store, StoreController } from "../store";
 import {
   _checkGroupStoreRootObject,
   _checkListenEvent,
-  _checkNull,
-  _checkOnEvent,
   _validateStore
 } from "../developement";
-import { checkReWriteStoreAndGetResult, createPath } from "../commonProdDev";
+import { getData } from "../commonProdDev";
 import { ObservableSet, ObservableMap } from "../observable";
 
 function handleChanges(
   params: ChangeHandlerType,
   storeController: StoreController
 ) {
-  const { event, state, key, value, action } = params;
+  const { event, state } = params;
   let next: (options: InterceptOptionsType) => void;
   if (params.action === "update") {
     next = (options: InterceptOptionsType) => {
@@ -44,10 +35,8 @@ function handleChanges(
     };
   }
   storeController.handleDispatch(event, {
-    value,
-    key,
+    ...params,
     state: removeObservableAndProxy(state),
-    action: action,
     next
   });
 }
@@ -76,7 +65,13 @@ function createProxyValidator(
          * */
         const correctEvent = event[key] ?? event.locked;
         handleChanges(
-          { event: correctEvent ?? key, state, key, value, action: "update" },
+          {
+            event: correctEvent ?? key,
+            state,
+            key,
+            value,
+            action: "update"
+          },
           storeController
         );
       }
@@ -84,13 +79,16 @@ function createProxyValidator(
     },
     deleteProperty: (target: any, prop: any) => {
       const correctEvent = event[prop] ?? event.locked;
+      const changePreview = removeObservableAndProxy(target);
+      delete changePreview[prop];
       handleChanges(
         {
           event: correctEvent ?? prop,
           state: target,
           key: prop,
           value: null,
-          action: "delete"
+          action: "delete",
+          changePreview
         },
         storeController
       );
@@ -327,152 +325,30 @@ export function isSame(value1: any, value2: any): boolean {
   return Object.is(value1, value2);
 }
 
-export function getData(
-  paths: string[],
-  storeParams: StoreParamsType,
-  isSnapShot = false
-) {
-  const { store, storeType } = storeParams;
-
-  const storeKey = paths[0];
-
-  if (storeKey === "_D") {
-    return removeObservableAndProxy(store.store);
-  }
-
-  if (storeKey === "_A") {
-    return store.actions;
-  }
-
-  if (paths[1] === "_A" && storeType === GROUP) {
-    return isSnapShot ? store.actions : store.actions[storeKey];
-  }
-
-  if (paths[1] === "_D" && storeType === GROUP) {
-    return isSnapShot
-      ? removeObservableAndProxy(store.store)
-      : removeObservableAndProxy(store.store[storeKey]);
-  }
-
-  return removeObservableAndProxy(
-    checkReWriteStoreAndGetResult(storeParams, paths)
-  );
-}
-
-export function getEventAndPath(
-  eventType: EventType,
-  storeType: StoreType,
-  target?: string
-) {
-  const paths = createPath(target);
-  const firstKey = paths[0];
-  const customGroupPath = paths[1];
-  let canSubscribe = true;
-  let event = "";
-  if (eventType === SUBSCRIPTION) {
-    if (storeType === SLICE) {
-      canSubscribe = firstKey !== "_A";
-      event = firstKey ? (firstKey === "_D" ? ALL : firstKey) : ALL;
-    }
-    if (storeType === GROUP) {
-      canSubscribe = firstKey !== "_A" && customGroupPath !== "_A";
-      event = firstKey
-        ? customGroupPath === "_D" || firstKey === "_D"
-          ? ALL
-          : firstKey
-        : ALL;
-    }
-  }
-  if (eventType === INTERCEPTION) {
-    if (storeType === SLICE) {
-      canSubscribe = firstKey !== "_A";
-      event = firstKey === "_D" ? ALL : (target as string);
-    }
-    if (storeType === GROUP) {
-      canSubscribe = firstKey !== "_A" && customGroupPath !== "_A";
-      event =
-        customGroupPath === "_D" || firstKey === "_D"
-          ? ALL
-          : (target as string);
-    }
-  }
-  return { event, paths, canSubscribe };
-}
-
-function sendDataWithMemo(
-  event: string | undefined,
-  callback: any,
-  storeParams: StoreParamsType
-) {
-  const { storeController } = storeParams;
-  const {
-    event: EVENT,
-    paths,
-    canSubscribe
-  } = getEventAndPath(SUBSCRIPTION, storeParams.storeType, event);
-  let snapShot = getData(paths, storeParams);
-  if (!canSubscribe) {
-    return () => void 0;
-  }
-  return storeController.subscribe(EVENT, () => {
-    const newData = getData(paths, storeParams);
-    if (!isSame(snapShot, newData)) {
-      snapShot = newData;
-      callback(snapShot);
-    }
-  });
-}
-
 export function attachEvent(store: any, storeParams: StoreParamsType) {
-  store.on = function (event: string, callback: any) {
-    _checkOnEvent && _checkOnEvent(event, callback);
-    return sendDataWithMemo(undefined, callback, storeParams);
-  };
   store.listen = function (event: string, callback: any) {
-    _checkListenEvent &&
-      _checkListenEvent(event, callback, storeParams, SUBSCRIPTION);
-    return sendDataWithMemo(event, callback, storeParams);
+    _checkListenEvent && _checkListenEvent(event, callback, storeParams);
+    let snapShot = getData(event, storeParams);
+    return storeParams.storeController.subscribe(event, () => {
+      const newData = getData(event, storeParams);
+      if (!isSame(snapShot, newData)) {
+        snapShot = newData;
+        callback(snapShot);
+      }
+    });
   };
   store.intercept = function (event: string, callback: any) {
-    _checkListenEvent &&
-      _checkListenEvent(event, callback, storeParams, INTERCEPTION);
-    const { event: EVENT, canSubscribe } = getEventAndPath(
-      INTERCEPTION,
-      storeParams.storeType,
-      event
-    );
-    if (!canSubscribe) {
-      return () => void 0;
-    }
-    const { storeController } = storeParams;
-    return storeController.registerInterceptor(EVENT, callback);
-  };
-  return store;
-}
-
-export function attachSnapshotHandler(
-  store: any,
-  storeParams: StoreParamsType
-) {
-  store.getActions = function (event?: string) {
-    _checkNull && _checkNull(event);
-    const paths = storeParams.storeType === GROUP ? ["", "_A"] : ["_A"];
-    return getData(paths, storeParams, true);
-  };
-  store.getDataSnapshot = function (event?: string) {
-    _checkNull && _checkNull(event);
-    const paths = storeParams.storeType === GROUP ? ["", "_D"] : ["_D"];
-    return getData(paths, storeParams, true);
-  };
-  store.getSnapshot = function (event?: string) {
-    _checkNull && _checkNull(event);
-    return getData([], storeParams, true);
+    _checkListenEvent && _checkListenEvent(event, callback, storeParams);
+    return storeParams.storeController.registerInterceptor(event, callback);
   };
   return store;
 }
 
 export function finalizeStore(store: any, storeParams: StoreParamsType) {
-  return attachEvent(attachSnapshotHandler(store, storeParams), storeParams);
+  store.dispatcher = storeParams.store.getActions();
+  store.getActions = storeParams.store.getActions;
+  store.getSnapshot = storeParams.store.getStore;
+  return attachEvent(store, storeParams);
 }
 
 export function getNewStore<S>(store: S): StoreParamsType {
@@ -480,24 +356,9 @@ export function getNewStore<S>(store: S): StoreParamsType {
   _validateStore && _validateStore(store);
   const storeType = getStoreType(store);
   const appStore = new Store();
-  if (storeType === GROUP) {
-    appStore.init(store);
-    return {
-      storeType,
-      store: {
-        store: appStore.store,
-        actions: appStore.actions
-      },
-      storeController: appStore.storeController
-    };
-  }
-  appStore.initPrivate(store);
+  appStore.init(store, storeType);
   return {
-    storeType,
-    store: {
-      store: appStore.privateStore,
-      actions: appStore.privateStoreActions
-    },
+    store: appStore,
     storeController: appStore.storeController
   };
 }

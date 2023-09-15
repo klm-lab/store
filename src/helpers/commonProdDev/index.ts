@@ -1,4 +1,4 @@
-import { ALL, SLICE } from "../../constants/internal";
+import { ALL } from "../../constants/internal";
 import {
   FunctionType,
   InterceptOptionsType,
@@ -10,29 +10,14 @@ import {
   _checkInterceptorCall
 } from "../developement";
 
-export function createPath(target?: string) {
+function createPath(target?: string) {
   return target ? (target === ALL ? [] : target.split(".")) : [];
 }
 
-export function checkReWriteStoreAndGetResult(
-  storeParams: StoreParamsType,
-  paths: string[]
-) {
-  const { store, storeType } = storeParams;
-  let result: any = {};
-  if (storeType === SLICE) {
-    result = {
-      ...store.store,
-      ...store.actions
-    };
-  } else {
-    for (const key in store.store) {
-      result[key] = {
-        ...store.store[key],
-        ...store.actions[key]
-      };
-    }
-  }
+export function getData(target: string, storeParams: StoreParamsType) {
+  const paths = createPath(target);
+  const { store } = storeParams;
+  let result = store.getStore();
   paths.forEach((p) => {
     _checkConnectionToStore && _checkConnectionToStore(result, paths, p);
     result = result[p];
@@ -54,5 +39,5 @@ export function callIfYouCan(
   if (interceptorAction === "override.keyAndValue") {
     _checkInterceptorCall && _checkInterceptorCall(options, interceptorAction);
   }
-  callback();
+  interceptorAction !== "rejectAction" && callback();
 }

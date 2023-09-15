@@ -67,30 +67,25 @@ test("Test use store", () => {
   );
   expect(() => myStore("")).toThrowError(ERROR_TEXT.OPTIONAL_INVALID_TARGET);
   expect(myStore("*")).toHaveProperty("value");
-  expect(myStore("*")).toHaveProperty("func");
-  expect(myStore("_A")).not.toHaveProperty("value");
-  expect(myStore("_D")).not.toHaveProperty("func");
-  expect(myGroupStore("*")).toHaveProperty("group.func");
-  expect(myGroupStore("*")).toHaveProperty("group.value");
-  expect(myGroupStore("_A")).not.toHaveProperty("group.value");
-  expect(myGroupStore("group._A")).not.toHaveProperty("group.value");
-  expect(myGroupStore("_D")).not.toHaveProperty("group.func");
-  expect(myGroupStore("group._D")).not.toHaveProperty("group.func");
+  expect(myStore.getActions()).not.toHaveProperty("value");
+  expect(myStore.getActions()).not.toHaveProperty("group.value");
+  expect(myStore.getActions()).not.toHaveProperty("group.value");
+  expect(myStore.getActions()).not.toHaveProperty("group.value");
   //get group action
-  const { func } = myGroupStore("group");
+  const { func } = myGroupStore.dispatcher.group;
   // dispatch slice action
-  myStore("_A").func(15);
+  myStore.getActions().func(15);
   // dispatch group action
   func(2);
   // connect to group data
   const data = myGroupStore("group.value");
-  const data_D1 = myGroupStore("group._D").value;
-  const data_D2 = myGroupStore("_D").group.value;
+  const data_D1 = myGroupStore("group").value;
+  const data_D2 = myGroupStore("*").group.value;
   expect(data).toBe(2);
   expect(data_D1).toBe(2);
   expect(data_D2).toBe(2);
   // connect to slice data
-  expect(myStore("_D").value).toBe(15);
+  expect(myStore().value).toBe(15);
   expect(myStore("value")).toBe(15);
 
   // Testing newProp
@@ -107,25 +102,25 @@ test("Test use store", () => {
   expect(newData.emptySet).toContain("test set");
   // testing new props
   actions.newArrayProp();
-  expect(myStore.getDataSnapshot()).toHaveProperty("arrayProp");
+  expect(myStore.getSnapshot()).toHaveProperty("arrayProp");
   actions.manipulateArray((store) => {
     store.arrayProp = [...Array(2).keys()];
     store.arrayProp.push("data");
   });
-  expect(myStore.getDataSnapshot().arrayProp).toContain("data");
-  expect(myStore.getDataSnapshot().arrayProp).toContain(1);
+  expect(myStore.getSnapshot().arrayProp).toContain("data");
+  expect(myStore.getSnapshot().arrayProp).toContain(1);
 
   // testing deletion
   actions.deleteValueProp();
-  expect(myStore.getDataSnapshot()).not.toHaveProperty("value");
+  expect(myStore.getSnapshot()).not.toHaveProperty("value");
   actions.deleteInSet();
-  expect(myStore.getDataSnapshot().dataSet).not.toContain("value");
+  expect(myStore.getSnapshot().dataSet).not.toContain("value");
   actions.deleteInMap();
-  expect(myStore.getDataSnapshot().dataMAp).not.toContain("t");
+  expect(myStore.getSnapshot().dataMAp).not.toContain("t");
   actions.clearInSet();
-  expect(myStore.getDataSnapshot().dataSet.size).toBe(0);
+  expect(myStore.getSnapshot().dataSet.size).toBe(0);
   actions.clearInMap();
-  expect(myStore.getDataSnapshot().dataMAp.size).toBe(0);
+  expect(myStore.getSnapshot().dataMAp.size).toBe(0);
 });
 test("Test use store override", () => {
   const myStore = createStore({
@@ -158,7 +153,7 @@ test("Test use store override", () => {
     store.override.keyAndValue("ok");
   });
   actions.deleteValueProp();
-  expect(myStore.getDataSnapshot()).toHaveProperty("value");
+  expect(myStore.getSnapshot()).toHaveProperty("value");
   expect(() => actions.deleteOther()).toThrowError(
     ERROR_TEXT.CAN_NOT_BE_CALLED.replace(E_T, "override.keyAndValue")
   );
@@ -229,18 +224,18 @@ test("Test use store override deletion in Map and Set", () => {
 
   actions.updateMap();
   actions.updateMap2();
-  expect(myStore.getDataSnapshot().dataMAp.get("newKey")).toBe("ok");
-  expect(myStore.getDataSnapshot().dataMAp.get("t")).toBe(true);
-  expect(myStore.getDataSnapshot().dataMAp2.get("newKey")).toBe(10);
-  expect(myStore.getDataSnapshot().dataMAp2.get("t")).toBe(true);
+  expect(myStore.getSnapshot().dataMAp.get("newKey")).toBe("ok");
+  expect(myStore.getSnapshot().dataMAp.get("t")).toBe(true);
+  expect(myStore.getSnapshot().dataMAp2.get("newKey")).toBe(10);
+  expect(myStore.getSnapshot().dataMAp2.get("t")).toBe(true);
   actions.deleteInMap();
-  expect(myStore.getDataSnapshot().dataMAp.get("t")).toBeDefined();
+  expect(myStore.getSnapshot().dataMAp.get("t")).toBeDefined();
   actions.deleteInSet();
-  expect(myStore.getDataSnapshot().dataSet).toContain("value");
-  expect(myStore.getDataSnapshot().dataSet2).toContain("value2");
-  expect(myStore.getDataSnapshot().dataSet2).not.toContain("ok");
+  expect(myStore.getSnapshot().dataSet).toContain("value");
+  expect(myStore.getSnapshot().dataSet2).toContain("value2");
+  expect(myStore.getSnapshot().dataSet2).not.toContain("ok");
   actions.deleteData();
-  expect(myStore.getDataSnapshot()).not.toHaveProperty("toDelete");
+  expect(myStore.getSnapshot()).not.toHaveProperty("toDelete");
 });
 
 test("Test use store with no override in set or map or obj when clearing or deleting data", () => {

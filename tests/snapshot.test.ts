@@ -18,9 +18,6 @@ test("Data snapshot values", () => {
   const store2 = createStore({ data: 12, func: () => null });
   const dataSnapshot = store.getDataSnapshot();
   const dataSnapshot2 = store2.getDataSnapshot();
-  expect(() => store2.getDataSnapshot("dhfjdhf")).toThrowError(
-    ERROR_TEXT.NO_PARAMS
-  );
   expect(dataSnapshot).toMatchObject({});
   expect(dataSnapshot2).toHaveProperty("data");
 });

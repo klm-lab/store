@@ -45,12 +45,15 @@ class ObservableMap extends Map {
           )
         );
       };
+      const changePreview = removeObservableAndProxy(this);
+      changePreview.set(key, value);
       this.#storeController.handleDispatch(this.#event, {
         value,
         state: removeObservableAndProxy(this),
         key,
         action: "setInMap",
-        next
+        next,
+        changePreview
       });
     }
     return this;
@@ -58,6 +61,8 @@ class ObservableMap extends Map {
 
   clear() {
     const state = removeObservableAndProxy(this);
+    const changePreview = removeObservableAndProxy(this);
+    changePreview.clear();
     this.#storeController.handleDispatch(this.#event, {
       key: null,
       value: null,
@@ -65,7 +70,8 @@ class ObservableMap extends Map {
       action: "clearInMap",
       next: () => {
         super.clear();
-      }
+      },
+      changePreview
     });
   }
 
@@ -74,12 +80,15 @@ class ObservableMap extends Map {
     const next = (options: InterceptOptionsType) => {
       super.delete(options.key);
     };
+    const changePreview = removeObservableAndProxy(this);
+    changePreview.delete(key);
     this.#storeController.handleDispatch(this.#event, {
       key: key,
       value: null,
       state: state,
       action: "deleteInMap",
-      next
+      next,
+      changePreview
     });
     return true;
   }
@@ -116,6 +125,8 @@ class ObservableSet extends Set {
     }
     if (!super.has(value)) {
       const state = removeObservableAndProxy(this);
+      const changePreview = removeObservableAndProxy(this);
+      changePreview.add(value);
       this.#storeController.handleDispatch(this.#event, {
         key: null,
         value,
@@ -130,7 +141,8 @@ class ObservableSet extends Set {
               true
             )
           );
-        }
+        },
+        changePreview
       });
     }
     return this;
@@ -138,6 +150,8 @@ class ObservableSet extends Set {
 
   clear() {
     const state = removeObservableAndProxy(this);
+    const changePreview = removeObservableAndProxy(this);
+    changePreview.clear();
     this.#storeController.handleDispatch(this.#event, {
       key: null,
       value: null,
@@ -145,12 +159,15 @@ class ObservableSet extends Set {
       action: "clearInSet",
       next: () => {
         super.clear();
-      }
+      },
+      changePreview
     });
   }
 
   delete(value: any) {
     const state = removeObservableAndProxy(this);
+    const changePreview = removeObservableAndProxy(this);
+    changePreview.delete(value);
     this.#storeController.handleDispatch(this.#event, {
       key: null,
       value,
@@ -158,7 +175,8 @@ class ObservableSet extends Set {
       action: "deleteInSet",
       next: (options: InterceptOptionsType) => {
         super.delete(options.value);
-      }
+      },
+      changePreview
     });
     return true;
   }

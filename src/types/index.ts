@@ -8,37 +8,20 @@ import { StoreController } from "../helpers/store";
  * We infer U to extend string to be sure that we call recursive NestedKey only with a string key
  * */
 type NestedKeyTypes<S> = {
-  [Key in keyof S & string]: S[Key] extends
-    | Map<any, any>
-    | Date
-    | Set<any>
-    | Array<any>
-    ? Key
+  [Key in keyof S & string]: S[Key] extends FunctionType
+    ? never
     : S[Key] extends object
-    ?
-        | `${Key}`
-        | `${Key}.${NestedKeyTypes<S[Key]> extends infer U extends string
-            ? U
-            : never}`
+    ? `${Key}` | `${Key}.${NestedKeyTypes<S[Key]>}`
     : `${Key}`;
-}[keyof S & string];
-
-/* Suggestion for group store
- * storeKey.${custom(_A | _D)}
- * */
-type DataOrActionsKeyTypes<S> = {
-  [Key in keyof S & string]: `${Key}._A` | `${Key}._D`;
 }[keyof S & string];
 
 /* Suggestion for slice and group store based on storeOptions O
  * If o contains storeType: "group", then the user wants a grouped store.
- * So the target key can be any nested key and also storeKey.${custom(_A | _D)}
- * in case of a slice store, we have nestedKey and _A | _ D
- * _A is to type the result as chainable actions and _D as all data
+ * So the target key can be any nested key and also storeKey.${custom( *)}
+ * in case of a slice store, we have nestedKey and _ D
+ * * as all data
  * */
-type TargetType<S> = GetStoreType<S> extends "group"
-  ? NestedKeyTypes<S> | "*" | "_A" | "_D" | DataOrActionsKeyTypes<S>
-  : NestedKeyTypes<S> | "*" | "_A" | "_D";
+type TargetType<S> = NestedKeyTypes<S> | "*";
 
 /* Return list a key that is not function.
  * We cast the result as [keyof S] to
@@ -83,18 +66,6 @@ type CheckExtends<T, U> = T extends U ? T : never;
 type GetStoreType<S> = CheckExtends<S[keyof S], FunctionType> extends never
   ? "group"
   : "slice";
-
-/* Here we are doing the same thing as FunctionChainType with an exception.
- * The scenario here is a grouped store. And in a grouped store,
- * we first have the groupKey or storeKey then have storeContent.
- * We make the storeKey a function that returns all other functions
- * in the groupedStore[groupKey]. It is like we are fist calling
- * groupedStore[groupKey]('called').someFunction().otherFunction()....
- * If we skip this part, the groupedStore[groupKey] is not typed callable
- * but typed a value that contains otherFunctions.
- * groupedStore[groupKey]'not called'.someFunction().otherFunction()
- * */
-type FunctionKeyType<S> = (...values: unknown[]) => FunctionChainType<S>;
 
 /* This is the storeOutputType, it's check if the option passed is a group
  * then called StoreGroupOutputType else call SliceStoreOutputType with
@@ -152,7 +123,7 @@ type StoreOutputType<S, K> = GetStoreType<S> extends "group"
  * */
 type StoreGroupOutputType<S, K> = K extends keyof S
   ? keyof S[K] extends FunctionType
-    ? FunctionKeyType<S>
+    ? never
     : /* Second check to see if it is an object.
      *Here the user sends, for example, modal as a key
      * which is some root key of the group.
@@ -164,7 +135,7 @@ type StoreGroupOutputType<S, K> = K extends keyof S
        * **/
       {
         [NK in keyof S[K]]: keyof S[K][NK] extends FunctionType
-          ? FunctionKeyType<S[K]>
+          ? never
           : S[K][NK];
       }
     : // Nested is not an object // S[K],
@@ -178,7 +149,7 @@ type StoreGroupOutputType<S, K> = K extends keyof S
 
 type SliceStoreOutputType<S, K> = K extends keyof S
   ? keyof S[K] extends FunctionType
-    ? FunctionKeyType<S>
+    ? never
     : S[K]
   : K extends `${infer FirstKey}.${infer SecondKey}`
   ? FirstKey extends keyof S
@@ -188,17 +159,10 @@ type SliceStoreOutputType<S, K> = K extends keyof S
 
 /*
  * In CustomSuggestionType, we check if K extends one of our suggestions
- * (_A | _D) and return chain actions of pure data or both, otherwise we return never
+ *  *) and return chain actions of pure data or both, otherwise we return never
  * */
-type CustomSuggestionType<S, K> = K extends "_A"
-  ? FunctionChainType<S>
-  : K extends "_D"
-  ? DataOnlyType<S>
-  : K extends "*"
-  ? DataOnlyType<S> & FunctionChainType<S>
-  : never;
+type CustomSuggestionType<S, K> = K extends "*" ? DataOnlyType<S> : never;
 
-type StoreEvent = "change";
 type InterceptActionType =
   | "update"
   | "delete"
@@ -223,6 +187,7 @@ interface InterceptDataType<S, TargetKey> {
     event: string;
     value: any;
     action: InterceptActionType;
+    updatedStore: any;
     state: StoreOutputType<S, TargetKey>;
   };
   allowAction(): void;
@@ -244,6 +209,7 @@ type InterceptOptionsType = {
   key: any;
   next: (options: InterceptOptionsType) => void;
   action: InterceptActionType;
+  changePreview: any;
 };
 
 type FunctionType = (...args: unknown[]) => unknown;
@@ -270,13 +236,6 @@ type Store<S> = {
       };
   getSnapshot: () => GetStoreType<S> extends "slice"
     ? // Slice store,we rewrite Function and merge data
-      FunctionChainType<S> & DataOnlyType<S>
-    : // Group store, we extract the first key then rewrite S[key] Function and merge S[key] data
-      {
-        [k in keyof S]: FunctionChainType<S[k]> & DataOnlyType<S[k]>;
-      };
-  getDataSnapshot: () => GetStoreType<S> extends "slice"
-    ? // Slice store,we rewrite Function and merge data
       DataOnlyType<S>
     : // Group store, we extract the first key then rewrite S[key] Function and merge S[key] data
       {
@@ -287,10 +246,6 @@ type Store<S> = {
     : {
         [k in keyof S]: FunctionChainType<S[k]>;
       };
-  on: (
-    event: StoreEvent,
-    callback: (store: FunctionChainType<S> & DataOnlyType<S>) => void
-  ) => () => void;
   listen: <TargetKey>(
     event: TargetKey extends TargetType<S> ? TargetKey : TargetType<S>,
     callback: (data: StoreOutputType<S, TargetKey>) => void
@@ -311,16 +266,19 @@ type Store<S> = {
       };
 };
 
+type TypeObject = {
+  [k in string]: any;
+};
+
 type StoreDataAndActionsType = {
-  store: any;
-  actions: any;
+  getStore: (...args: unknown[]) => TypeObject;
+  getActions: (...args: unknown[]) => TypeObject;
 };
 
 type StoreType = "slice" | "group";
 
 type StoreParamsType = {
   store: StoreDataAndActionsType;
-  storeType: StoreType;
   storeController: StoreController;
 };
 
@@ -334,12 +292,12 @@ type StringObjectType = {
   [k in string]: string;
 };
 
-type EventType = "subscription" | "interception";
 type InterceptorActionsType =
   | "allowAction"
   | "override.value"
   | "override.key"
-  | "override.keyAndValue";
+  | "override.keyAndValue"
+  | "rejectAction";
 
 export type {
   Store,
@@ -347,11 +305,11 @@ export type {
   StoreParamsType,
   ErrorType,
   StoreType,
-  EventType,
   InterceptorActionsType,
   InterceptOptionsType,
   InterceptActionType,
   ChangeHandlerType,
   StringObjectType,
-  FunctionType
+  FunctionType,
+  InterceptDataType
 };

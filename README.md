@@ -189,9 +189,13 @@ const MyComponent = () => {
   // Or
   const { exp } = useExpStore("*");
 
+  // Or
+  const { exp } = useExpStore("_D");
+
   return <span>{exp}</span>;
 };
 ```
+
 
 With that MyComponent render if `exp` changes and if any value in `useExpStore` change. Sometimes it is what we want, so
 it is fine.
@@ -224,22 +228,19 @@ Autocompletion or intellisense is there for you. You don't need to memorize the 
 
 #### Extract actions or data
 
-You can also extract your actions in the same way. Extract the actions yourself or asking the store to do that,
-has no impact on performance.
+You can call getActions to get your actions or access your actions through the dispatcher
+property
 
 > Note : <br/>
 > Every action is chainable. You can use it like this action().action().actions() and so on.
 > Or just call action(). It is totally up to you <br/>
 
-* Extract one action
+* Extract actions
 
 ```js
-// Optimal way to extract 
-const putOil = useCarStore("putOil");
+const { putOil } = useCarStore.getActions()
 
-// or default way
-
-const { putOil } = useCarStore()
+const putOil = useCarStore.dispatcher.putOil;
 
 // And use it like this
 
@@ -248,27 +249,7 @@ putOil() // or
 putOil().takePassengers().drive() //and so on. depends on what you want
 ```
 
-Both have no impact on performance.<br>
-Component that only extracts action will never rerender if some data change.<br>
-It is just a dispatcher.
-But if the same component extract also some data like this
-
-```js
-// Extracting action and exp value
-const { updateExp, exp } = useExpStore()
-```
-
-Then the component will render if `exp` change.<br/>
-The optimal way to extract only one action is to do so
-
-```js
-const updateExp = useExpStore("updateExp")
-```
-
-This is really optimal for extracting one action because no subscription is added and `useExpStore` is used are as PURE
-DISPATCHER.
-
-* Extract all actions or all data <br>
+* Extract all data <br>
   Sometimes we want to extract all the data without the actions, and vice versa. You can proceed as follows
 
 ```js
@@ -780,6 +761,7 @@ myStore.intercept("data.value", (store) => {
 * `intercepted.key`: Target key, (the key of the data that request changes)
 * `intercepted.value`: The new value
 * `intercepted.state`: The part of the store that request changes
+* `intercepted.changePreview`: A preview of changes in the state
 * `intercepted.action`: The current action:
   * `update`: When you want to update something in your store
   * `addInSet`: When you want to add something to a Set collection in your store
@@ -959,7 +941,7 @@ We always call the interceptors in descending order, from the first to the last 
 
 If the first called interceptor overrides some value, then the next interceptor will intercept that new value.
 Same thing for a key.<br>
-If the first interceptor rejects the action, then all other interceptors will never be called.
+If the first interceptor rejects the action, all other interceptors if they exist will be also called to do their check.
 Let's take this example.
 Our store value is `{data: {content: {value: 10 }}}`
 
@@ -968,13 +950,13 @@ myStore.intercept("data.content", (store) => {
     // We intercept a change where
   if (store.intercepted.value === null) {
     store.rejectAction() 
-  }
+  } else store.allowAction()
 })
 myStore.intercept("data.content.value", (store) => {
   // We intercept a change where
   if (store.intercepted.value > 10) {
     store.allowAction()
-  }
+  } else store.rejectAction()
 })
 ```
 If we allow this action, it will brake all other components that are connected to `data.content.value`, `value` will not exist anymore.
@@ -1032,9 +1014,6 @@ Skip this step if you are using event listener. Every listener is free from HOOK
 * `on` A Function attached to your store that lets listen to all `change` in your store.
 * `listen` A Function attached to your store that lets you listen to changes in a specific part of your store.
 * `intercept` A Function attached to your store that lets you intercept changes in your store.
-* `_A` A key that can be passed to your store in order to get a PURE DISPATCHER with all actions in that store.
-* `groupKey._A` A key that can be passed to your grouped store in order to get a PURE DISPATCHER with all actions in
-  that store. `groupKey` is the name of your group
 * `._D` A key that can be passed to your store in order to get all data in that store making it a PURE DATA
   CONSUMER.
 * `groupKey._D` A key that can be passed to your grouped store in order to get all data in that store making it a PURE

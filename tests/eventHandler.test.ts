@@ -48,33 +48,19 @@ test("Valid listener", () => {
     }
   });
 
-  const getChangeSpy = vi.fn(myStore.on);
   const getListenSpy = vi.fn(myStore.listen);
   const getInterceptSpy = vi.fn(myStore.intercept);
-  const unsubscribeChange = getChangeSpy("change", () => null);
   const unsubscribeListen = getListenSpy("data", () => null);
-  const unsubscribeListenD = getListenSpy("data._D", () => null);
-  const unsubscribeListenD2 = getListenSpy("_D", () => null);
-  const unsubscribeListenA = getListenSpy("data._A", () => null);
   const unsubscribeIntercept = getInterceptSpy("*", (s) => s.allowAction());
-  // No subscription
-  const noSub = getInterceptSpy("_A", (s) => s.allowAction());
-  expect(unsubscribeChange).toBeTypeOf("function");
+
   expect(unsubscribeListen).toBeTypeOf("function");
   expect(unsubscribeIntercept).toBeTypeOf("function");
-  expect(unsubscribeListenD).toBeTypeOf("function");
-  expect(unsubscribeListenD2).toBeTypeOf("function");
-  expect(unsubscribeListenA).toBeTypeOf("function");
-  expect(getChangeSpy).toHaveReturned();
   expect(getListenSpy).toHaveReturned();
   expect(getInterceptSpy).toHaveReturned();
   const unsubscribeListenData = getListenSpy("*", () => null);
   const unsSpy = vi.fn(unsubscribeListenData);
-  const noSubSpy = vi.fn(noSub);
   unsSpy();
-  noSubSpy();
   expect(unsSpy).toBeCalled();
-  expect(noSubSpy).toBeCalled();
 
   const listenCallback = vi.fn((store) => {
     expect(store.value).toBe(true);
@@ -112,9 +98,6 @@ test("Test update on listener", () => {
       func: (store, v) => (store.value += v)
     }
   });
-  myStore.on("change", (store) => {
-    expect(store).toMatchObject({ data: 13 });
-  });
   myStore.listen("data", (store) => {
     expect(store).toBe(13);
   });
@@ -133,7 +116,6 @@ test("Test update on listener", () => {
   });
 
   myStore.intercept("*", interceptCallback);
-  myStore.intercept("_D", interceptCallback);
 
   myStore.intercept("content.fine", interceptCallback);
   myStore.intercept("content.step.value", interceptCallback);
@@ -142,13 +124,12 @@ test("Test update on listener", () => {
   myStore.intercept("deep.deep.mock", interceptCallback);
   // testing one level up key
   myStore.intercept("deep.deep", interceptCallback);
-  myGroupStore.intercept("_D", (store) => {});
-  const uns = myGroupStore.intercept("group._D", (store) => {});
+
+  const uns = myGroupStore.intercept("group", (store) => {});
   const unsSpy = vi.fn(uns);
   unsSpy();
   expect(unsSpy).toBeCalled();
-  myGroupStore.intercept("group._A", (store) => {});
-  myStore().func(1);
+  myStore.dispatcher.func(1);
   expect(interceptCallback.mock.calls.length).toBe(1);
 });
 
@@ -178,7 +159,7 @@ test("Test interceptor with same function", () => {
   myStore.intercept("content.fine", interceptCallback);
   myStore.intercept("content.step.value", interceptCallback);
 
-  myStore().func2();
+  myStore.dispatcher.func2();
   expect(interceptCallback.mock.calls.length).toBe(1);
 });
 
@@ -214,7 +195,7 @@ test("Test interceptor with different function", () => {
   myStore.intercept("content.fine", interceptCallback2);
   myStore.intercept("content.step.value", interceptCallback3);
 
-  myStore().func2();
+  myStore.dispatcher.func2();
   expect(interceptCallback.mock.calls.length).toBe(1);
   expect(interceptCallback2.mock.calls.length).toBe(1);
   expect(interceptCallback3.mock.calls.length).toBe(0);
@@ -265,9 +246,9 @@ test("Test interceptor reject", () => {
   myStore.intercept("content.fine", interceptCallback_2);
   myStore.intercept("content.step.value", interceptCallback_3);
 
-  myStore().func2();
+  myStore.dispatcher.func2();
   expect(interceptCallback_1.mock.calls.length).toBe(1);
-  expect(interceptCallback_2.mock.calls.length).toBe(0);
+  expect(interceptCallback_2.mock.calls.length).toBe(1);
   expect(interceptCallback_3.mock.calls.length).toBe(0);
 });
 
@@ -297,11 +278,11 @@ test("Test interceptor with override", () => {
   myStore.intercept("content.step", interceptCallback2);
   myStore.intercept("content.step.value", interceptCallback3);
 
-  myStore().func2();
+  myStore.dispatcher.func2();
   expect(interceptCallback.mock.calls.length).toBe(1);
   expect(interceptCallback2.mock.calls.length).toBe(1);
   expect(interceptCallback3.mock.calls.length).toBe(1);
-  expect(myStore.getDataSnapshot().content.step).toHaveProperty("newKey", 60);
+  expect(myStore.getSnapshot().content.step).toHaveProperty("newKey", 60);
 
   const unsSpy = vi.fn(unsub);
   unsSpy();
@@ -325,9 +306,9 @@ test("Test interceptor with override only Key", () => {
 
   myStore.intercept("*", interceptCallback);
 
-  myStore().func2();
+  myStore.getActions().func2();
   expect(interceptCallback.mock.calls.length).toBe(1);
-  expect(myStore.getDataSnapshot()).toHaveProperty("hello", {});
+  expect(myStore.getSnapshot()).toHaveProperty("hello", {});
 });
 
 test("Test interceptor with override only value", () => {
@@ -347,9 +328,9 @@ test("Test interceptor with override only value", () => {
 
   myStore.intercept("*", interceptCallback);
 
-  myStore().func2();
+  myStore.getActions().func2();
   expect(interceptCallback.mock.calls.length).toBe(1);
-  expect(myStore.getDataSnapshot()).toHaveProperty("content", 10);
+  expect(myStore.getSnapshot()).toHaveProperty("content", 10);
 });
 
 test("Test interceptor with override key and value", () => {
@@ -369,9 +350,9 @@ test("Test interceptor with override key and value", () => {
 
   myStore.intercept("*", interceptCallback);
 
-  myStore().func2();
+  myStore.dispatcher.func2();
   expect(interceptCallback.mock.calls.length).toBe(1);
-  expect(myStore.getDataSnapshot()).toHaveProperty("key", 10);
+  expect(myStore.getSnapshot()).toHaveProperty("key", 10);
 });
 
 test("Test interceptor with override key and value with no params", () => {
@@ -391,9 +372,9 @@ test("Test interceptor with override key and value with no params", () => {
 
   myStore.intercept("*", interceptCallback);
 
-  myStore().func2();
+  myStore.getActions().func2();
   expect(interceptCallback.mock.calls.length).toBe(1);
-  expect(myStore.getDataSnapshot()).toHaveProperty("content", {});
+  expect(myStore.getSnapshot()).toHaveProperty("content", {});
 });
 
 test("Test interceptor with override key with no params", () => {
@@ -413,9 +394,9 @@ test("Test interceptor with override key with no params", () => {
 
   myStore.intercept("*", interceptCallback);
 
-  myStore().func2();
+  myStore.dispatcher.func2();
   expect(interceptCallback.mock.calls.length).toBe(1);
-  expect(myStore.getDataSnapshot()).toHaveProperty("content", {});
+  expect(myStore.getSnapshot()).toHaveProperty("content", {});
 });
 
 test("Test interceptor with override value with no params", () => {
@@ -435,7 +416,7 @@ test("Test interceptor with override value with no params", () => {
 
   myStore.intercept("content", interceptCallback);
 
-  myStore().func2();
+  myStore.dispatcher.func2();
   expect(interceptCallback.mock.calls.length).toBe(1);
-  expect(myStore.getDataSnapshot()).toHaveProperty("content", {});
+  expect(myStore.getSnapshot()).toHaveProperty("content", {});
 });

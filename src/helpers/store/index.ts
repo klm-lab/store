@@ -1,41 +1,44 @@
-import { assignObservableAndProxy } from "../util";
+import { assignObservableAndProxy, removeObservableAndProxy } from "../util";
 import { StoreController } from "./controller";
+import { StoreType } from "../../types";
+import { GROUP } from "../../constants/internal";
 
 class Store {
-  private readonly _store: any;
-  private readonly _StoreActions: any;
+  private _store: any;
+  private _proxyStore: any;
+  private _storeActions: any;
   private readonly _storeController: StoreController;
-  private _privateStore: any;
-  private _privateStoreActions: any;
 
   constructor() {
-    this._storeController = new StoreController();
     this._store = {};
-    this._privateStore = {};
-    this._privateStoreActions = {};
-    this._StoreActions = {};
+    this._proxyStore = {};
+    this._storeActions = {};
     this.init = this.init.bind(this);
     this.initPrivate = this.initPrivate.bind(this);
+    this.updateStore = this.updateStore.bind(this);
+    this.getStore = this.getStore.bind(this);
+    this.getActions = this.getActions.bind(this);
+    this._storeController = new StoreController(this.updateStore);
   }
 
   get storeController() {
     return this._storeController;
   }
 
-  get store() {
+  getStore() {
     return this._store;
   }
 
-  get privateStore() {
-    return this._privateStore;
+  getActions() {
+    return this._storeActions;
   }
 
-  get privateStoreActions() {
-    return this._privateStoreActions;
+  updateStore() {
+    this.#syncStore();
   }
 
-  get actions() {
-    return this._StoreActions;
+  #syncStore() {
+    this._store = removeObservableAndProxy(this._proxyStore);
   }
 
   #separateActionsAndData(slice: any) {
@@ -54,10 +57,17 @@ class Store {
     return { store, actions };
   }
 
-  init(userStore: any) {
-    this.#groupInit(userStore);
+  init(userStore: any, storeType: StoreType) {
+    this.#initStore(userStore, storeType);
   }
 
+  #initStore(userStore: any, storeType: StoreType) {
+    if (storeType === GROUP) {
+      this.#groupInit(userStore);
+    } else {
+      this.initPrivate(userStore);
+    }
+  }
   #groupInit(userStore: any) {
     for (const userStoreKey in userStore) {
       // we get a slice ex: we get test from {test: any, other: any}
@@ -68,18 +78,18 @@ class Store {
        * */
       const { store, actions } = this.#separateActionsAndData(slice);
       this._store[userStoreKey] = store;
-      this._StoreActions[userStoreKey] = actions;
+      this._storeActions[userStoreKey] = actions;
 
       // We create a proxy for every stored data
-      this._store[userStoreKey] = assignObservableAndProxy(
+      this._proxyStore[userStoreKey] = assignObservableAndProxy(
         this._store[userStoreKey],
         userStoreKey,
         this._storeController
       );
       // We check if an action is present
-      if (this._StoreActions[userStoreKey]) {
+      if (this._storeActions[userStoreKey]) {
         // We get the slice actions: EX: test actions in store {test: {someAction: ()=> ...}.other: {someAction: () => ...}}
-        const actionsSlice = this._StoreActions[userStoreKey];
+        const actionsSlice = this._storeActions[userStoreKey];
         /* We recreate actions passing proxy data
          * There is no need to apply proxy on actions. That why we do this in a separate loop
          * We also add chaining actions. So user can do actions().actions()....
@@ -88,8 +98,8 @@ class Store {
           // This the action define by the user
           const userFunction = actionsSlice[key];
           //Now we recreate actions and passing data to be updated and all other user params
-          this._StoreActions[userStoreKey][key] = (...values: any) => {
-            userFunction(this._store[userStoreKey], ...values);
+          this._storeActions[userStoreKey][key] = (...values: any) => {
+            userFunction(this._proxyStore[userStoreKey], ...values);
             return actionsSlice;
           };
         }
@@ -108,12 +118,12 @@ class Store {
      * to separate actions from data first
      * */
     const { store, actions } = this.#separateActionsAndData(params);
-    this._privateStore = store;
-    this._privateStoreActions = actions;
+    this._store = store;
+    this._storeActions = actions;
 
     // We create a proxy with the store
-    this._privateStore = assignObservableAndProxy(
-      this._privateStore,
+    this._proxyStore = assignObservableAndProxy(
+      this._store,
       "",
       this._storeController
     );
@@ -123,11 +133,11 @@ class Store {
      * We also add chaining actions.
      * So user can do actions().actions()....
      * */
-    for (const key in this._privateStoreActions) {
-      const element = this._privateStoreActions[key];
-      const actions = this._privateStoreActions;
-      this._privateStoreActions[key] = (...values: any) => {
-        element(this._privateStore, ...values);
+    for (const key in this._storeActions) {
+      const element = this._storeActions[key];
+      const actions = this._storeActions;
+      this._storeActions[key] = (...values: any) => {
+        element(this._proxyStore, ...values);
         return actions;
       };
     }

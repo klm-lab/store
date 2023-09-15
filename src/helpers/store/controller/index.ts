@@ -1,5 +1,9 @@
 import { ALL } from "../../../constants/internal";
-import { InterceptOptionsType, InterceptorActionsType } from "../../../types";
+import type {
+  FunctionType,
+  InterceptOptionsType,
+  InterceptorActionsType
+} from "../../../types";
 import { callIfYouCan } from "../../commonProdDev";
 
 class StoreController {
@@ -9,14 +13,16 @@ class StoreController {
   #totalInterceptors: number;
   readonly #interceptors: any;
   #olderInterceptorEvent: string;
+  #updateStore: FunctionType;
 
-  constructor() {
+  constructor(updateStore: FunctionType) {
     this.#events = {};
     this.#allListeners = new Set();
     this.#interceptorForAll = null;
     this.#totalInterceptors = 0;
     this.#interceptors = {};
     this.#olderInterceptorEvent = "";
+    this.#updateStore = updateStore;
   }
 
   subscribe(event: string, listener: any) {
@@ -218,6 +224,7 @@ class StoreController {
   }
 
   #dispatch(event: string) {
+    this.#updateStore();
     // we get the rootKey as event
     const registeredEvent = event.split(".")[0];
     //Call all 'ALL' listeners if they are present
@@ -257,6 +264,7 @@ class StoreController {
         state: options.state,
         key: options.key,
         action: options.action,
+        changePreview: options.changePreview,
         event
       },
       // Call another interceptor with an allowed decision
@@ -279,7 +287,10 @@ class StoreController {
           nextInterceptor("override.keyAndValue", options);
         }
       },
-      rejectAction: () => void 0
+      // rejectAction: () => void 0
+      rejectAction: () => {
+        nextInterceptor("rejectAction", options);
+      }
     });
   }
 
