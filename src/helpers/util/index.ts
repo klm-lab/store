@@ -88,7 +88,6 @@ function createProxyValidator(
          * we take the key as event
          * */
         const correctEvent = event[key] ?? event.locked;
-        // console.log("sending correct event", correctEvent, state, key);
         handleChanges(
           { event: correctEvent ?? key, state, key, value, action: "update" },
           storeController
@@ -164,6 +163,9 @@ export function assignObservableAndProxy(
   }
   if (data && data.constructor.name === "Map") {
     // console.warn("locked map event", event);
+    /*
+     * Observables locked event themselves
+     * */
     return handleObservable(
       data,
       new ObservableMap(storeController, event, true),
@@ -174,6 +176,9 @@ export function assignObservableAndProxy(
   }
   if (data && data.constructor.name === "Set") {
     // console.warn("locked set event", event);
+    /*
+     * Observables locked event themselves
+     * */
     return handleObservable(
       data,
       new ObservableSet(storeController, event, true),
@@ -271,7 +276,9 @@ export function getStoreType(store: any): StoreType {
     }
   }
   // we check if key in store is an object
-  storeType === GROUP && _checkGroupStoreRootObject(store);
+  storeType === GROUP &&
+    _checkGroupStoreRootObject &&
+    _checkGroupStoreRootObject(store);
 
   return storeType as StoreType;
 }
@@ -431,15 +438,17 @@ function sendDataWithMemo(
 
 export function attachEvent(store: any, storeParams: StoreParamsType) {
   store.on = function (event: string, callback: any) {
-    _checkOnEvent(event, callback);
+    _checkOnEvent && _checkOnEvent(event, callback);
     return sendDataWithMemo(undefined, callback, storeParams);
   };
   store.listen = function (event: string, callback: any) {
-    _checkListenEvent(event, callback, storeParams, SUBSCRIPTION);
+    _checkListenEvent &&
+      _checkListenEvent(event, callback, storeParams, SUBSCRIPTION);
     return sendDataWithMemo(event, callback, storeParams);
   };
   store.intercept = function (event: string, callback: any) {
-    _checkListenEvent(event, callback, storeParams, INTERCEPTION);
+    _checkListenEvent &&
+      _checkListenEvent(event, callback, storeParams, INTERCEPTION);
     const { event: EVENT, canSubscribe } = getEventAndPath(
       INTERCEPTION,
       storeParams.storeType,
@@ -459,17 +468,17 @@ export function attachSnapshotHandler(
   storeParams: StoreParamsType
 ) {
   store.getActions = function (event?: string) {
-    _checkNull(event);
+    _checkNull && _checkNull(event);
     const paths = storeParams.storeType === GROUP ? ["", "_A"] : ["_A"];
     return getData(paths, storeParams, true);
   };
   store.getDataSnapshot = function (event?: string) {
-    _checkNull(event);
+    _checkNull && _checkNull(event);
     const paths = storeParams.storeType === GROUP ? ["", "_D"] : ["_D"];
     return getData(paths, storeParams, true);
   };
   store.getSnapshot = function (event?: string) {
-    _checkNull(event);
+    _checkNull && _checkNull(event);
     return getData([], storeParams, true);
   };
   return store;
@@ -480,8 +489,8 @@ export function finalizeStore(store: any, storeParams: StoreParamsType) {
 }
 
 export function getNewStore<S>(store: S): StoreParamsType {
-  _warnProdNodeENV();
-  _validateStore(store);
+  _warnProdNodeENV && _warnProdNodeENV();
+  _validateStore && _validateStore(store);
   const storeType = getStoreType(store);
   const appStore = new Store();
   if (storeType === GROUP) {

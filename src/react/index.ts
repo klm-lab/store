@@ -14,7 +14,7 @@ function createStore<S>(store: S): Store<S> {
   const newStore = getNewStore(store);
 
   function useSyncStore(target?: string) {
-    _checkStoreTarget(target);
+    _checkStoreTarget && _checkStoreTarget(target);
     return useStore(newStore, target);
   }
 

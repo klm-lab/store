@@ -1,12 +1,14 @@
-const config = require("./webpack.react.config");
-const CopyWebpackPlugin = require("copy-webpack-plugin");
-const path = require("path");
+/* eslint-disable */
+// @ts-ignore
+import { reactConfig } from "./webpack.react.config";
+import CopyWebpackPlugin from "copy-webpack-plugin";
+import path from "path";
 
 module.exports = {
-  ...config,
+  ...reactConfig,
   mode: "production",
   output: {
-    ...config.output,
+    ...reactConfig.output,
     filename: "[name].min.js"
   },
   plugins: [

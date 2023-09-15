@@ -857,14 +857,14 @@ myStore.intercept("data.value", (store) => {
 
 That's it.
 > [!WARNING]<br>
-> If you can only place one interceptor per value,<br>
+> You can only place one interceptor per value,<br>
 
 ```js
 // First interceptor
 myStore.intercept("data.value", (store) => {
 
 })
-// Second interceptor
+// Second interceptor override the first one
 myStore.intercept("data.value", (store) => {
 
 })
@@ -894,7 +894,7 @@ For example: `data` was `{content: {value: 10}}`, and for some reason `data` bec
 We will immediately call your interceptor.<br>
 Original line is broken because `content.value` disappears.
 
-The job of that interceptor is to keep the value inside `data.content.value` safe.<br>,
+The job of that interceptor is to keep the value inside `data.content.value` safe.<br>
 But if `data` changes, you need to know if that change will impact your value or not.
 
 You will never intercept change on `data.someThing` or `data.content.something`.
@@ -905,36 +905,36 @@ You will never intercept change on `data.someThing` or `data.content.something`.
 You can add many interceptors as you want with once condition. Only one interceptor per value.
 
 ```js
-myStore.intercept("*", (store) => {
-}) // ✅ this one is kept
-myStore.intercept("data", (store) => {
-}) // ✅ this one is kept
-myStore.intercept("data.content", (store) => {
-}) // ✅ this one is kept
-myStore.intercept("data.content.value", (store) => {
-}) // ✅ this one is kept
+// ✅ this one is kept
+myStore.intercept("*", (store) => {})
+// ✅ this one is kept
+myStore.intercept("data", (store) => {})
+// ✅ this one is kept
+myStore.intercept("data.content", (store) => {})
+// ✅ this one is kept
+myStore.intercept("data.content.value", (store) => {})
 ```
 
 ```js
-myStore.intercept("data", (store) => {
-}) // ❗ is override
-myStore.intercept("data", (store) => {
-}) // ❗ is override
-myStore.intercept("data", (store) => {
-}) // ✅ this one is kept
+// ❗ is override
+myStore.intercept("data", (store) => {})
+// ❗ is override
+myStore.intercept("data", (store) => {})
+// ✅ this one is kept
+myStore.intercept("data", (store) => {}) 
 ```
 
 ```js
-myStore.intercept("*", (store) => {
-}) // ❗ is override
-myStore.intercept("_D", (store) => {
-}) // ✅ this one is kept
+// ❗ is override
+myStore.intercept("*", (store) => {})
+// ✅ this one is kept
+myStore.intercept("_D", (store) => {})
 ```
 ```js
-myStore.intercept("_D", (store) => {
-}) // ❗ is override
-myStore.intercept("*", (store) => {
-}) // ✅ this one is kept
+// ❗ is override
+myStore.intercept("_D", (store) => {})
+// ✅ this one is kept
+myStore.intercept("*", (store) => {})
 ```
 `*` and `_D` is the same thing. They both intercept all data changes
 
@@ -943,12 +943,11 @@ myStore.intercept("*", (store) => {
 Whether you reverse the order, for example
 
 ```js
-myStore.intercept("data.content", (store) => {
-})
-myStore.intercept("data", (store) => {
-})
-myStore.intercept("data.content.value", (store) => {
-})
+myStore.intercept("data.content", (store) => {})
+// Or
+myStore.intercept("data", (store) => {})
+// Or
+myStore.intercept("data.content.value", (store) => {})
 ```
 
 `data` interceptor will be called first, then

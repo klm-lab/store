@@ -34,44 +34,25 @@ class ObservableMap extends Map {
     }
     // Not in init mode
     if (super.get(key) !== value) {
+      const next = (options: InterceptOptionsType) => {
+        super.set(
+          options.key,
+          assignObservableAndProxy(
+            options.value,
+            this.#event,
+            this.#storeController,
+            true
+          )
+        );
+      };
       this.#storeController.handleDispatch(this.#event, {
         value,
         state: removeObservableAndProxy(this),
         key,
         action: "setInMap",
-        allowAction: (options: InterceptOptionsType) => {
-          super.set(
-            options.key,
-            assignObservableAndProxy(
-              options.value,
-              this.#event,
-              this.#storeController,
-              true
-            )
-          );
-        },
-        overrideKey: (options: InterceptOptionsType) => {
-          super.set(
-            options.key,
-            assignObservableAndProxy(
-              options.value,
-              this.#event,
-              this.#storeController,
-              true
-            )
-          );
-        },
-        overrideKeyAndValue: (options: InterceptOptionsType) => {
-          super.set(
-            options.key,
-            assignObservableAndProxy(
-              options.value,
-              this.#event,
-              this.#storeController,
-              true
-            )
-          );
-        }
+        allowAction: next,
+        overrideKey: next,
+        overrideKeyAndValue: next
       });
     }
     return this;
@@ -92,20 +73,16 @@ class ObservableMap extends Map {
 
   delete(key: any) {
     const state = removeObservableAndProxy(this);
+    const next = (options: InterceptOptionsType) => {
+      super.delete(options.key);
+    };
     this.#storeController.handleDispatch(this.#event, {
       key: key,
       value: null,
       state: state,
       action: "deleteInMap",
-      allowAction: (options: InterceptOptionsType) => {
-        super.delete(options.key);
-      },
-      overrideKey: (options: InterceptOptionsType) => {
-        super.delete(options.key);
-      },
-      overrideKeyAndValue: (options: InterceptOptionsType) => {
-        super.delete(options.key);
-      }
+      allowAction: next,
+      overrideKey: next
     });
     return true;
   }

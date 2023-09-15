@@ -242,6 +242,7 @@ type InterceptOptionsType = {
   value: any;
   state: any;
   key: any;
+  next?: (options: InterceptOptionsType) => void;
   action: InterceptActionType;
   allowAction: (value?: any) => void;
   overrideKey?: (key?: any) => void;

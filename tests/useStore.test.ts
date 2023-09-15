@@ -15,12 +15,21 @@ test("Test use store with locked event", () => {
       store.newProp.get("lock").newPropInsideMap = 12;
     }
   });
+
+  const myStore = createStore({
+    gh: {},
+    noLockedEvent: (store) => {
+      delete store.gh.notExistedProp;
+      delete store.notExistedProp;
+    }
+  });
   // Testing newProp
   emptyStore.dispatcher.add();
   expect(emptyStore("newProp").get("lock")).toMatchObject({ data: false });
   emptyStore.dispatcher.update();
   expect(emptyStore("newProp").get("lock").data).toBe(true);
-  expect(emptyStore("newProp").get("lock")).toHaveProperty("newPropInsideMap");
+  myStore.dispatcher.noLockedEvent();
+  expect(myStore()).toHaveProperty("gh");
 });
 test("Test use store", () => {
   const emptyStore = createStore({ add: (store) => (store.newProp = 12) });
@@ -199,7 +208,7 @@ test("Test use store override deletion in Map and Set", () => {
   });
 
   myStore.intercept("dataMAp2", (store) => {
-    if (store.intercepted.action !== "clearInMap") {
+    if (!["deleteInMap", "clearInMap"].includes(store.intercepted.action)) {
       store.override.keyAndValue("newKey", 10);
     } else {
       store.allowAction();

@@ -1,12 +1,14 @@
-const config = require("./webpack.config");
-const CopyWebpackPlugin = require("copy-webpack-plugin");
-const path = require("path");
+/* eslint-disable */
+// @ts-ignore
+import { vanillaConfig } from "./webpack.config";
+import CopyWebpackPlugin from "copy-webpack-plugin";
+import path from "path";
 
 module.exports = {
-  ...config,
+  ...vanillaConfig,
   mode: "production",
   output: {
-    ...config.output,
+    ...vanillaConfig.output,
     filename: "[name].min.js"
   },
   plugins: [

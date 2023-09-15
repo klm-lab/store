@@ -310,15 +310,18 @@ class StoreController {
       options.allowAction(options);
     }
     if (interceptorAction === "override.value") {
-      _checkInterceptorCall(options, interceptorAction);
+      _checkInterceptorCall &&
+        _checkInterceptorCall(options, interceptorAction);
       options.allowAction(options);
     }
     if (interceptorAction === "override.key") {
-      _checkInterceptorCall(options, interceptorAction);
+      _checkInterceptorCall &&
+        _checkInterceptorCall(options, interceptorAction);
       options.overrideKey && options.overrideKey(options);
     }
     if (interceptorAction === "override.keyAndValue") {
-      _checkInterceptorCall(options, interceptorAction);
+      _checkInterceptorCall &&
+        _checkInterceptorCall(options, interceptorAction);
       options.overrideKeyAndValue && options.overrideKeyAndValue(options);
     }
     this.#dispatch(event);
