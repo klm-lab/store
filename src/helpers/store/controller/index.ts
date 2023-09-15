@@ -287,15 +287,32 @@ class StoreController {
    * This util will create a Set of doted key from the event.
    * So we will iterate through its value step by step
    * */
-  #createSetEventsByKey(event: string) {
+  // #createSetEventsByKey(event: string) {
+  //   const eventTab = event.split(".");
+  //   const set = new Set();
+  //   let key = eventTab[0];
+  //   eventTab.forEach((e) => {
+  //     key = key === e ? e : `${key}.${e}`;
+  //     set.add(key);
+  //   });
+  //   return set;
+  // }
+
+  /*
+   * Instead of using the util describe above. We will create our own generator function,
+   * to yield step by step its value and save some line of code
+   * */
+  *#createSetEventsByKey(event: string): Generator<string> {
     const eventTab = event.split(".");
-    const set = new Set();
+    //We grab the first key
     let key = eventTab[0];
-    eventTab.forEach((e) => {
-      key = key === e ? e : `${key}.${e}`;
-      set.add(key);
-    });
-    return set;
+    /* We loop through the event Tab and concat the key with next key in event Tab
+     * Generator will be done when we call next() at the end of the loop.
+     * At the end, value will be undefined and done will be set to true.
+     * */
+    for (let i = 0; i < eventTab.length; i++, key = `${key}.${eventTab[i]}`) {
+      yield key;
+    }
   }
 
   /*
@@ -333,7 +350,8 @@ class StoreController {
      * */
 
     // We create the iterator
-    const valuesIterator = this.#createSetEventsByKey(event).values();
+    // const eventIterator = this.#createSetEventsByKey(event).values();
+    const eventIterator = this.#createSetEventsByKey(event);
     // We create calledInterceptors collection
     const calledInterceptors = new Set();
 
@@ -343,7 +361,7 @@ class StoreController {
       finalOptions?: any
     ) => {
       // We get the current value from iterator and also the done variable
-      const { value: key, done } = valuesIterator.next();
+      const { value: key, done } = eventIterator.next();
       /* First, we check if an interceptor is registered with the current key.
        * If so, we check if we didn't call the interceptor.
        * If so, we add the interceptor to the called collection and we call it.
