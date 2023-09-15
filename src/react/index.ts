@@ -67,18 +67,16 @@ function useStore(storeParams: StoreParamsType, target?: string) {
       /* We override snapShot with newData because they are not the same
        * At this point we can return snapshot or newData, it does not matter
        * Because both are the same.
-       * But its important override snapShop with newData to make them same by value.
+       * But it is important to override snapShop with newData to make them same by value.
        * Since getSnapshot is called multiple time by useSyncExternalStore,
        * in next call isSame check will be true, and we will return snapshot not newData,
        * newData returns a new object every time it is called, because he removes proxy on data before
        * return it.
-       * Removing proxy generates a new object.
-       * We do that to help the user.
+       * Removing proxy generates a new object. We do that to help the user.
        * If he accidentally updates the data outside an action.
        * It will not work.
        * Every mutation is guaranteed to be inside defined actions.
-       * Any outside
-       * mutation will fail and data integrity will be preserved
+       * Any outside mutation will fail and data integrity will be preserved
        * */
       snapShot = newData;
       // return snapshot or newData, it doesn't matter

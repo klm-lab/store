@@ -46,7 +46,7 @@ type TargetType<S> = GetStoreType<S> extends "group"
  * All keys present in castedResult are not functions
  * */
 type NotFunctions<S> = {
-  [Key in keyof S]: S[Key] extends Function ? never : Key;
+  [Key in keyof S]: S[Key] extends FunctionType ? never : Key;
 }[keyof S];
 
 /* Here we are using the castedResult as a mapped key.
@@ -62,7 +62,7 @@ type DataOnlyType<S> = {
  * All keys present in castedResult are functions
  * */
 type OnlyFunctions<S> = {
-  [Key in keyof S]: S[Key] extends Function ? Key : never;
+  [Key in keyof S]: S[Key] extends FunctionType ? Key : never;
 }[keyof S];
 
 /* Here we are using the castedResult as a mapped key.
@@ -80,7 +80,7 @@ type CheckExtends<T, U> = T extends U ? T : never;
  * We check if key is never, (meaning k not extend Function) then we return group
  * else we return slice
  * */
-type GetStoreType<S> = CheckExtends<S[keyof S], Function> extends never
+type GetStoreType<S> = CheckExtends<S[keyof S], FunctionType> extends never
   ? "group"
   : "slice";
 
@@ -151,7 +151,7 @@ type StoreOutputType<S, K> = GetStoreType<S> extends "group"
  * will fail when checking if 45645 or ___ is part of S and then called CustomSuggestionType to do come check
  * */
 type StoreGroupOutputType<S, K> = K extends keyof S
-  ? keyof S[K] extends Function
+  ? keyof S[K] extends FunctionType
     ? FunctionKeyType<S>
     : /* Second check to see if it is an object.
      *Here the user sends, for example, modal as a key
@@ -163,7 +163,7 @@ type StoreGroupOutputType<S, K> = K extends keyof S
        * else, we return S[K][NK]
        * **/
       {
-        [NK in keyof S[K]]: keyof S[K][NK] extends Function
+        [NK in keyof S[K]]: keyof S[K][NK] extends FunctionType
           ? FunctionKeyType<S[K]>
           : S[K][NK];
       }
@@ -177,7 +177,7 @@ type StoreGroupOutputType<S, K> = K extends keyof S
   : CustomSuggestionType<S, K>;
 
 type SliceStoreOutputType<S, K> = K extends keyof S
-  ? keyof S[K] extends Function
+  ? keyof S[K] extends FunctionType
     ? FunctionKeyType<S>
     : S[K]
   : K extends `${infer FirstKey}.${infer SecondKey}`
@@ -242,12 +242,11 @@ type InterceptOptionsType = {
   value: any;
   state: any;
   key: any;
-  next?: (options: InterceptOptionsType) => void;
+  next: (options: InterceptOptionsType) => void;
   action: InterceptActionType;
-  allowAction: (value?: any) => void;
-  overrideKey?: (key?: any) => void;
-  overrideKeyAndValue?: (key?: any, value?: any) => void;
 };
+
+type FunctionType = (...args: unknown[]) => unknown;
 
 /*
  * StoreType.
@@ -353,5 +352,6 @@ export type {
   InterceptOptionsType,
   InterceptActionType,
   ChangeHandlerType,
-  StringObjectType
+  StringObjectType,
+  FunctionType
 };

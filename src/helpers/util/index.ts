@@ -30,39 +30,28 @@ function handleChanges(
   storeController: StoreController
 ) {
   const { event, state, key, value, action } = params;
-  let options = {} as InterceptOptionsType;
+  let next: (options: InterceptOptionsType) => void = () => void 0;
   if (params.action === "update") {
-    const next = (options: InterceptOptionsType) => {
+    next = (options: InterceptOptionsType) => {
       state[options.key] = assignObservableAndProxy(
         options.value,
         event,
         storeController
       );
     };
-    options = {
-      value,
-      key,
-      state: removeObservableAndProxy(state),
-      action: action,
-      overrideKey: next,
-      allowAction: next,
-      overrideKeyAndValue: next
-    };
   }
   if (params.action === "delete") {
-    const next = (options: InterceptOptionsType) => {
+    next = (options: InterceptOptionsType) => {
       delete state[options.key];
     };
-    options = {
-      value,
-      key,
-      state: removeObservableAndProxy(state),
-      action: action,
-      overrideKey: next,
-      allowAction: next
-    };
   }
-  storeController.handleDispatch(event, options);
+  storeController.handleDispatch(event, {
+    value,
+    key,
+    state: removeObservableAndProxy(state),
+    action: action,
+    next
+  });
 }
 
 function createProxyValidator(

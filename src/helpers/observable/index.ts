@@ -50,9 +50,7 @@ class ObservableMap extends Map {
         state: removeObservableAndProxy(this),
         key,
         action: "setInMap",
-        allowAction: next,
-        overrideKey: next,
-        overrideKeyAndValue: next
+        next
       });
     }
     return this;
@@ -65,7 +63,7 @@ class ObservableMap extends Map {
       value: null,
       state: state,
       action: "clearInMap",
-      allowAction: () => {
+      next: () => {
         super.clear();
       }
     });
@@ -81,8 +79,7 @@ class ObservableMap extends Map {
       value: null,
       state: state,
       action: "deleteInMap",
-      allowAction: next,
-      overrideKey: next
+      next
     });
     return true;
   }
@@ -124,7 +121,7 @@ class ObservableSet extends Set {
         value,
         state,
         action: "addInSet",
-        allowAction: (options: InterceptOptionsType) => {
+        next: (options: InterceptOptionsType) => {
           super.add(
             assignObservableAndProxy(
               options.value,
@@ -146,7 +143,7 @@ class ObservableSet extends Set {
       value: null,
       state: state,
       action: "clearInSet",
-      allowAction: () => {
+      next: () => {
         super.clear();
       }
     });
@@ -159,7 +156,7 @@ class ObservableSet extends Set {
       value,
       state: state,
       action: "deleteInSet",
-      allowAction: (options: InterceptOptionsType) => {
+      next: (options: InterceptOptionsType) => {
         super.delete(options.value);
       }
     });

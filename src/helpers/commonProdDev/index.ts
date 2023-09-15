@@ -1,6 +1,14 @@
 import { ALL, SLICE } from "../../constants/internal";
-import { StoreParamsType } from "../../types";
-import { _checkConnectionToStore } from "../developement";
+import {
+  FunctionType,
+  InterceptOptionsType,
+  InterceptorActionsType,
+  StoreParamsType
+} from "../../types";
+import {
+  _checkConnectionToStore,
+  _checkInterceptorCall
+} from "../developement";
 
 export function createPath(target?: string) {
   return target ? (target === ALL ? [] : target.split(".")) : [];
@@ -30,4 +38,21 @@ export function checkReWriteStoreAndGetResult(
     result = result ? result[p] : undefined;
   });
   return result;
+}
+
+export function callIfYouCan(
+  options: InterceptOptionsType,
+  interceptorAction: InterceptorActionsType,
+  callback: FunctionType
+) {
+  if (interceptorAction === "override.value") {
+    _checkInterceptorCall && _checkInterceptorCall(options, interceptorAction);
+  }
+  if (interceptorAction === "override.key") {
+    _checkInterceptorCall && _checkInterceptorCall(options, interceptorAction);
+  }
+  if (interceptorAction === "override.keyAndValue") {
+    _checkInterceptorCall && _checkInterceptorCall(options, interceptorAction);
+  }
+  callback();
 }

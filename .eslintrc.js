@@ -27,8 +27,8 @@ module.exports = {
   plugins: ["@typescript-eslint", "react-hooks"],
   rules: {
     "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/ban-types": "off", // add this because of Function
+    //"@typescript-eslint/ban-types": "off", // add this because of Function
     "react-hooks/rules-of-hooks": "error" // Checks rules of Hooks
-    // "react-hooks/exhaustive-deps": "warn" // Checks effect dependencies
+    //"react-hooks/exhaustive-deps": "warn" // Checks effect dependencies
   }
 };

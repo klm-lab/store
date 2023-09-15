@@ -1,6 +1,6 @@
 import { ALL } from "../../../constants/internal";
 import { InterceptOptionsType, InterceptorActionsType } from "../../../types";
-import { _checkInterceptorCall } from "../../developement";
+import { callIfYouCan } from "../../commonProdDev";
 
 class StoreController {
   readonly #events: any;
@@ -306,25 +306,10 @@ class StoreController {
     interceptorAction: InterceptorActionsType,
     options: InterceptOptionsType
   ) {
-    if (interceptorAction === "allowAction") {
-      options.allowAction(options);
-    }
-    if (interceptorAction === "override.value") {
-      _checkInterceptorCall &&
-        _checkInterceptorCall(options, interceptorAction);
-      options.allowAction(options);
-    }
-    if (interceptorAction === "override.key") {
-      _checkInterceptorCall &&
-        _checkInterceptorCall(options, interceptorAction);
-      options.overrideKey && options.overrideKey(options);
-    }
-    if (interceptorAction === "override.keyAndValue") {
-      _checkInterceptorCall &&
-        _checkInterceptorCall(options, interceptorAction);
-      options.overrideKeyAndValue && options.overrideKeyAndValue(options);
-    }
-    this.#dispatch(event);
+    callIfYouCan(options, interceptorAction, () => {
+      options.next(options);
+      this.#dispatch(event);
+    });
   }
 
   /*
@@ -336,7 +321,7 @@ class StoreController {
      * If they are not present. We just allow the action and dispatch the event
      * */
     if (this.#totalInterceptors <= 0) {
-      options.allowAction(options);
+      options.next(options);
       this.#dispatch(event);
       return;
     }

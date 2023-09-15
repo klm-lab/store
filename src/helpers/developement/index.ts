@@ -8,7 +8,8 @@ function validateStore(store: any, errorMessage?: string) {
     _utilError &&
       _utilError({
         name: `Creating store`,
-        message: errorMessage ?? ERROR_TEXT.STORE_EMPTY,
+        message:
+          errorMessage ?? ((ERROR_TEXT && ERROR_TEXT.STORE_EMPTY) as string),
         state: store
       });
   }
@@ -16,7 +17,9 @@ function validateStore(store: any, errorMessage?: string) {
     _utilError &&
       _utilError({
         name: `Creating store`,
-        message: errorMessage ?? ERROR_TEXT.STORE_NOT_OBJECT,
+        message:
+          errorMessage ??
+          ((ERROR_TEXT && ERROR_TEXT.STORE_NOT_OBJECT) as string),
         state: store
       });
   }
@@ -26,7 +29,8 @@ function checkGroupStoreRootObject(store: any) {
   for (const key in store) {
     validateStore(
       store[key],
-      ERROR_TEXT.GROUP_STORE_NOT_OBJECT.replace(E_T, key)
+      (ERROR_TEXT &&
+        ERROR_TEXT.GROUP_STORE_NOT_OBJECT.replace(E_T as string, key)) as string
     );
   }
 }
@@ -36,7 +40,7 @@ function checkOnEvent(event: string, callback: any) {
     _utilError &&
       _utilError({
         name: `Listen to event ${event}`,
-        message: ERROR_TEXT.NOT_CHANGE_EVENT,
+        message: (ERROR_TEXT && ERROR_TEXT.NOT_CHANGE_EVENT) as string,
         state: event
       });
   }
@@ -51,7 +55,7 @@ function checkStoreTarget(target?: string) {
     _utilError &&
       _utilError({
         name: `Connecting to ${target}`,
-        message: ERROR_TEXT.OPTIONAL_INVALID_TARGET
+        message: (ERROR_TEXT && ERROR_TEXT.OPTIONAL_INVALID_TARGET) as string
       });
   }
 }
@@ -61,7 +65,7 @@ function checkNull(target?: string) {
     _utilError &&
       _utilError({
         name: `Snapshot getter`,
-        message: ERROR_TEXT.NO_PARAMS,
+        message: (ERROR_TEXT && ERROR_TEXT.NO_PARAMS) as string,
         state: target
       });
   }
@@ -72,7 +76,7 @@ function checkCallback(event: string, callback: any) {
     _utilError &&
       _utilError({
         name: `Listen to event ${event}`,
-        message: ERROR_TEXT.NOT_VALID_CALLBACK
+        message: (ERROR_TEXT && ERROR_TEXT.NOT_VALID_CALLBACK) as string
       });
   }
 }
@@ -96,8 +100,8 @@ function checkListenEvent(
         name: `Listen to event ${event}`,
         message:
           eventType === SUBSCRIPTION
-            ? ERROR_TEXT.NOT_VALID_LISTEN_EVENT
-            : ERROR_TEXT.NOT_VALID_INTERCEPT_EVENT
+            ? ((ERROR_TEXT && ERROR_TEXT.NOT_VALID_LISTEN_EVENT) as string)
+            : ((ERROR_TEXT && ERROR_TEXT.NOT_VALID_INTERCEPT_EVENT) as string)
       });
   }
 
@@ -121,7 +125,7 @@ function warnProdNodeENV() {
     // "process" in window &&
     !["development", "production"].includes(process?.env?.NODE_ENV as string)
   ) {
-    console.warn(ERROR_TEXT.NO_NODE_ENV);
+    console.warn(ERROR_TEXT && ERROR_TEXT.NO_NODE_ENV);
   }
 }
 
@@ -142,7 +146,8 @@ function checkInterceptorCall(options: InterceptOptionsType, name: string) {
     _utilError &&
       _utilError({
         name: `Override when action is ${options.action}`,
-        message: ERROR_TEXT.CAN_NOT_BE_CALLED.replace(E_T, name)
+        message: (ERROR_TEXT &&
+          ERROR_TEXT.CAN_NOT_BE_CALLED.replace(E_T as string, name)) as string
       });
   }
 }
@@ -152,7 +157,11 @@ function checkConnectionToStore(result: any, paths: string[], p: string) {
     _utilError &&
       _utilError({
         name: `Connecting to ${paths.join(".")}`,
-        message: ERROR_TEXT.STORE_PROPERTY_UNDEFINED.replace(E_T, p)
+        message: (ERROR_TEXT &&
+          ERROR_TEXT.STORE_PROPERTY_UNDEFINED.replace(
+            E_T as string,
+            p
+          )) as string
       });
   }
 }

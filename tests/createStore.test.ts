@@ -1,9 +1,13 @@
+/* eslint-disable */
+// @ts-nocheck
 import { createStore } from "../src";
 import { test, expect, vi } from "vitest";
 import { E_T, ERROR_TEXT } from "../src/constants/internal";
 
 test("Invalid store", () => {
-  expect(() => createStore(undefined)).toThrowError(ERROR_TEXT.STORE_EMPTY);
+  expect(() => createStore(undefined)).toThrowError(
+    ERROR_TEXT && ERROR_TEXT.STORE_EMPTY
+  );
   expect(() => createStore(null)).toThrowError(ERROR_TEXT.STORE_EMPTY);
   expect(() => createStore("")).toThrowError(ERROR_TEXT.STORE_NOT_OBJECT);
   expect(() => createStore(5)).toThrowError(ERROR_TEXT.STORE_NOT_OBJECT);
