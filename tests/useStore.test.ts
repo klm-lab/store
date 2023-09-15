@@ -17,12 +17,16 @@ test("Test use store with locked event", () => {
   });
 
   const myStore = createStore({
+    value: undefined,
     gh: {},
     noLockedEvent: (store) => {
       delete store.gh.notExistedProp;
       delete store.notExistedProp;
     }
   });
+
+  const value = myStore("value");
+
   // Testing newProp
   emptyStore.dispatcher.add();
   expect(emptyStore("newProp").get("lock")).toMatchObject({ data: false });

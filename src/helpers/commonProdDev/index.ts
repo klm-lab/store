@@ -35,7 +35,7 @@ export function checkReWriteStoreAndGetResult(
   }
   paths.forEach((p) => {
     _checkConnectionToStore && _checkConnectionToStore(result, paths, p);
-    result = result ? result[p] : undefined;
+    result = result[p];
   });
   return result;
 }

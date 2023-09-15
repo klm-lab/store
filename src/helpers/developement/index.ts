@@ -119,15 +119,15 @@ function checkListenEvent(
   checkCallback(event, callback);
 }
 
-function warnProdNodeENV() {
-  if (
-    // typeof window !== "undefined" &&
-    // "process" in window &&
-    !["development", "production"].includes(process?.env?.NODE_ENV as string)
-  ) {
-    console.warn(ERROR_TEXT && ERROR_TEXT.NO_NODE_ENV);
-  }
-}
+// function warnProdNodeENV() {
+//   if (
+//     typeof window !== "undefined" &&
+//     "process" in window &&
+//     !["development", "production"].includes(process?.env?.NODE_ENV as string)
+//   ) {
+//     console.warn(ERROR_TEXT && ERROR_TEXT.NO_NODE_ENV);
+//   }
+// }
 
 function checkInterceptorCall(options: InterceptOptionsType, name: string) {
   const NOT_ALLOWED = {
@@ -153,7 +153,7 @@ function checkInterceptorCall(options: InterceptOptionsType, name: string) {
 }
 
 function checkConnectionToStore(result: any, paths: string[], p: string) {
-  if (!result || (result && typeof result[p] === "undefined")) {
+  function error() {
     _utilError &&
       _utilError({
         name: `Connecting to ${paths.join(".")}`,
@@ -163,6 +163,14 @@ function checkConnectionToStore(result: any, paths: string[], p: string) {
             p
           )) as string
       });
+  }
+
+  try {
+    if (!(p in result)) {
+      error();
+    }
+  } catch (e) {
+    error();
   }
 }
 
@@ -185,8 +193,8 @@ export const _checkListenEvent =
 export const _checkStoreTarget =
   process.env.NODE_ENV !== "production" && checkStoreTarget;
 export const _checkNull = process.env.NODE_ENV !== "production" && checkNull;
-export const _warnProdNodeENV =
-  process.env.NODE_ENV !== "production" && warnProdNodeENV;
+// export const _warnProdNodeENV =
+//   process.env.NODE_ENV !== "production" && warnProdNodeENV;
 export const _checkInterceptorCall =
   process.env.NODE_ENV !== "production" && checkInterceptorCall;
 export const _checkConnectionToStore =

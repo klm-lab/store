@@ -19,8 +19,7 @@ import {
   _checkListenEvent,
   _checkNull,
   _checkOnEvent,
-  _validateStore,
-  _warnProdNodeENV
+  _validateStore
 } from "../developement";
 import { checkReWriteStoreAndGetResult, createPath } from "../commonProdDev";
 import { ObservableSet, ObservableMap } from "../observable";
@@ -30,7 +29,7 @@ function handleChanges(
   storeController: StoreController
 ) {
   const { event, state, key, value, action } = params;
-  let next: (options: InterceptOptionsType) => void = () => void 0;
+  let next: (options: InterceptOptionsType) => void;
   if (params.action === "update") {
     next = (options: InterceptOptionsType) => {
       state[options.key] = assignObservableAndProxy(
@@ -39,8 +38,7 @@ function handleChanges(
         storeController
       );
     };
-  }
-  if (params.action === "delete") {
+  } else {
     next = (options: InterceptOptionsType) => {
       delete state[options.key];
     };
@@ -478,7 +476,7 @@ export function finalizeStore(store: any, storeParams: StoreParamsType) {
 }
 
 export function getNewStore<S>(store: S): StoreParamsType {
-  _warnProdNodeENV && _warnProdNodeENV();
+  //_warnProdNodeENV && _warnProdNodeENV();
   _validateStore && _validateStore(store);
   const storeType = getStoreType(store);
   const appStore = new Store();
