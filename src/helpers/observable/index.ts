@@ -45,7 +45,8 @@ class ObservableMap extends Map {
       // Add in the clone
       state.set(key, value);
 
-      this.#storeController.handleDispatch(this.#event, {
+      this.#storeController.handleDispatch({
+        event: this.#event,
         value,
         state: state, // <-- send clone
         interceptorAction: "allowAction", // <-- By default allow the action
@@ -75,7 +76,8 @@ class ObservableMap extends Map {
     const state = removeObservableAndProxy(this);
     // Clear the clone
     state.clear();
-    this.#storeController.handleDispatch(this.#event, {
+    this.#storeController.handleDispatch({
+      event: this.#event,
       key: null,
       value: null,
       state: state, // <-- send clone
@@ -97,7 +99,8 @@ class ObservableMap extends Map {
     const state = removeObservableAndProxy(this);
     // Delete in clone
     state.delete(key);
-    this.#storeController.handleDispatch(this.#event, {
+    this.#storeController.handleDispatch({
+      event: this.#event,
       key: key,
       value: null,
       state: state, // <-- send clone
@@ -159,7 +162,8 @@ class ObservableSet extends Set {
       const state = removeObservableAndProxy(this);
       // Add in the clone
       state.add(value);
-      this.#storeController.handleDispatch(this.#event, {
+      this.#storeController.handleDispatch({
+        event: this.#event,
         key: null,
         value,
         state: state, // <-- send clone
@@ -191,11 +195,12 @@ class ObservableSet extends Set {
     const state = removeObservableAndProxy(this);
     // Clear the clone
     state.clear();
-    this.#storeController.handleDispatch(this.#event, {
+    this.#storeController.handleDispatch({
+      event: this.#event,
       key: null,
       value: null,
       state: state, // <-- send clone
-      interceptorAction: "allowAction", // <-- By default allow the action
+      interceptorAction: "allowAction", // <-- By default, allow the action
       action: "clearInSet",
       next: (options: InterceptOptionsType) => {
         if (options.interceptorAction !== "rejectAction") {
@@ -213,7 +218,8 @@ class ObservableSet extends Set {
     const state = removeObservableAndProxy(this);
     // Delete in clone
     state.delete(value);
-    this.#storeController.handleDispatch(this.#event, {
+    this.#storeController.handleDispatch({
+      event: this.#event,
       key: null,
       value,
       state: state, // <-- send clone

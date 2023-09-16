@@ -725,7 +725,8 @@ See create a group store <a href="#group-store">HERE</a>
 
 ## Interceptors
 
-Interceptors are the guardians of your store. You can delegate all your control to them and keep your store clean.<br>
+Interceptors are firstly designed to keep sensitive data of your store safe unless you decided otherwise.<br>
+But you can also delegate some control them and keep your store clean. It is up to you
 With them, you can :
 
 * Allow an action (update or deletion)
@@ -736,11 +737,11 @@ With them, you can :
     * Override by key and value
 
 Please use them with caution.<br>
-They are designed to be fired on any change in your store.<br>
+They are designed to be fired on any change that would compromise their sensitive data.<br>
 Do not use them to update the UI, instead use <a href="#events">EVENTS</a> or
 <a href="#use-the-store">YOUR STORE</a>
 > [!WARNING]  
-> Never use interceptors to update your UI. Interceptors are safety provider and are fired on store changes
+> Never use interceptors to update your UI. Interceptors are safety provider and are fired on sensitive data changes
 
 ### Add an interceptor
 
@@ -755,15 +756,13 @@ myStore.intercept("data.value", (store) => {
   console.log(store.interception)
 })
 ```
-
 `store.interception` contains the intercepted data listed below:
 
 * `interception.key`: Target key, (the key of the data that request changes)
 * `interception.value`: The new value
 * `interception.update`: The draft store that is updated.
-* `interception.preservePath`: Tell you if the path you intercept still exist
-  * Ex: you intercept `data.content` and suddenly `data` becomes `5`. Its affect you
-  because `content` no longer exists
+* `interception.preservePath`: Tell you if the path you intercept is preserved during the update
+  * Ex: you intercept `data.content` and suddenly `data` becomes `5`. The path is broke because `content` no longer exists.
 * `interception.action`: The intercepted action:
   * `update`: When you want to update something in your store
   * `addInSet`: When you want to add something to a Set collection in your store
@@ -774,6 +773,59 @@ myStore.intercept("data.value", (store) => {
   * `clearInSet`: When you want to clear a Set collection in your store
   * `clearInMap`: When you want to clear a Map collection in your store
 * `interception.event`: The intercepted event
+
+Let's take this example
+```js
+const myStore = createStore({
+  data: null,
+  // My sensitive data
+  deep: {
+    content: {
+      moreDeep: {}
+    }
+  },
+  update: (store: any) => {
+   // ✅ Zero risk action
+    store.deep.content.moreDeep = {
+      ...store.deep
+    };
+    // ❌ Risky action
+    store.deep = null;
+    // ✅ Zero risk action
+    store.data = "some data";
+    // ✅ Zero risk action
+    store.deep.content.moreDeep.content.moreDeep = "my deep content"
+    // ❌ Risky action
+    delete store.deep
+  },
+});
+```
+With that all components that are connected to the sensitive data `deep.content.deep` will simply stop working because `deep` will be null and also deleted<br>.
+Since it is a sensitive data, we can always assure that `deep.content.moreDeep` will be available.<br>
+Lets add an interceptor
+
+```js
+myStore.intercept("deep.content.moreDeep", ({interception,allowAction,rejectAction}) => {
+  if (interception.preservePath) allowAction();
+  else rejectAction();
+})
+```
+`interception.preservePath` tell you if `deep.content.moreDeep` will be available after update.
+> [!NOTE]  
+> When you reject an action, it will not interrupt other actions
+
+In the example above all `❌ Risky action` are rejected but all others actions happened without any issue.
+
+> [!IMPORTANT]  
+> Interceptor does not guarantee the type of value that will be set, you need to guaranty that yourself.
+> It will make the sensitive data always available. But the content of the sensitive data is up to you
+
+```js
+myStore.intercept("deep.content.moreDeep", ({interception: {value},allowAction,rejectAction}) => {
+  if (interception.preservePath) allowAction();
+  else rejectAction();
+})
+```
 
 With that, let's do some control.
 
@@ -891,13 +943,14 @@ You can add many interceptors as you want with once condition. Only one intercep
 ```js
 // ✅ this one is kept
 myStore.intercept("*", (store) => {})
-// ✅ this one is kept
+// ❗ is override
 myStore.intercept("data", (store) => {})
-// ✅ this one is kept
+// ❗ is override
 myStore.intercept("data.content", (store) => {})
 // ✅ this one is kept
 myStore.intercept("data.content.value", (store) => {})
 ```
+`data.content.value` interceptor will handle all change including `data`, and `data.content`.
 
 ```js
 // ❗ is override

@@ -219,6 +219,7 @@ type ChangeHandlerType = {
 };
 
 type InterceptOptionsType = {
+  event: string;
   value: any;
   state: any;
   key: any;

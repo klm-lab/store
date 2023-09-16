@@ -8,6 +8,7 @@ import {
   _checkConnectionToStore,
   _checkInterceptorCall
 } from "../developement";
+import { removeObservableAndProxy } from "../util";
 
 function createPath(target?: string) {
   return target ? (target === ALL ? [] : target.split(".")) : [];
@@ -44,8 +45,9 @@ export function callIfYouCan(
 export function pathIsPreserved(event: string, getStore: any) {
   const paths = createPath(event);
   let preservePath = true;
+  let result: any = {};
   getStore((store: any) => {
-    let result = { ...store };
+    result = { ...store };
     for (let i = 0; i < paths.length; i++) {
       try {
         if (!(paths[i] in result)) {
@@ -59,5 +61,5 @@ export function pathIsPreserved(event: string, getStore: any) {
       result = result[paths[i]];
     }
   });
-  return preservePath;
+  return { preservePath, update: removeObservableAndProxy(result) };
 }

@@ -52,7 +52,7 @@ function handleChanges(
       }
     };
   }
-  storeController.handleDispatch(event, {
+  storeController.handleDispatch({
     ...params,
     state: removeObservableAndProxy(state),
     next
@@ -117,7 +117,7 @@ function createProxyValidator(
       const correctEvent = generatedEvent ?? prop;
 
       /* We keep old value as it is even if it is a proxy and will restore it
-       * if an interceptor reject the action.
+       * if an interceptor rejects the action.
        * */
       const oldValue = target[prop];
       delete target[prop];
@@ -179,7 +179,7 @@ export function assignObservableAndProxy(
   if (data && data.constructor.name === "Array") {
     /* Data is an array we locked the event
      * to array holder, ex: {arr: []}, we locked event to 'arr'.
-     *  StoreController will always dispatch 'arr' for every action inside the array
+     * StoreController will always dispatch 'arr' for every action inside the array
      * */
     helpers.eventsObject.locked = event;
     return new Proxy(
