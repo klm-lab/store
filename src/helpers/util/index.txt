@@ -23,33 +23,15 @@ function handleChanges(
   let next: (options: InterceptOptionsType) => void;
   if (params.action === "update") {
     next = (options: InterceptOptionsType) => {
-      if (options.interceptorAction === "rejectAction") {
-        state[params.key] = params.oldValue;
-      } else {
-        /* Maybe it is an override.
-         * We restore old value
-         * */
-        state[params.key] = params.oldValue;
-        // We execute interceptor decision
-        state[options.key] = assignObservableAndProxy(
-          options.value,
-          event,
-          storeController
-        );
-      }
+      state[options.key] = assignObservableAndProxy(
+        options.value,
+        event,
+        storeController
+      );
     };
   } else {
     next = (options: InterceptOptionsType) => {
-      if (options.interceptorAction === "rejectAction") {
-        state[params.key] = params.oldValue;
-      } else {
-        /* Maybe it is an override.
-         * We restore old value
-         * */
-        state[params.key] = params.oldValue;
-        // We execute interceptor decision
-        delete state[options.key];
-      }
+      delete state[options.key];
     };
   }
   storeController.handleDispatch(event, {
@@ -81,31 +63,14 @@ function createProxyValidator(
          * And now if the locked one doesn't exist also, like here, {}[key],
          * we take the key as event
          * */
-        const generatedEvent = event[key] ?? event.locked;
-        const correctEvent = generatedEvent ?? key;
-        const oldValue = state[key];
-        /* We removePRoxy here because, user can copy proxy data and send it here.
-         * ex: store.data.deep = {
-         *     ...store.data.deep,
-         *       // users custom change
-         * }
-         * This will lead in maximum call size, exceeded. Assign proxy will be called again
-         * and again and again
-         */
-        const newValue = removeObservableAndProxy(value);
-        /* Temporary changes*/
-        state[key] = newValue;
-        /* Temporary changes*/
-
+        const correctEvent = event[key] ?? event.locked;
         handleChanges(
           {
-            event: correctEvent,
+            event: correctEvent ?? key,
             state,
             key,
-            value: newValue,
-            oldValue,
-            action: "update",
-            interceptorAction: "allowAction"
+            value,
+            action: "update"
           },
           storeController
         );
@@ -113,23 +78,14 @@ function createProxyValidator(
       return true;
     },
     deleteProperty: (target: any, prop: any) => {
-      const generatedEvent = event[prop] ?? event.locked;
-      const correctEvent = generatedEvent ?? prop;
-
-      /* We keep old value as it is even if it is a proxy and will restore it
-       * if an interceptor reject the action.
-       * */
-      const oldValue = target[prop];
-      delete target[prop];
+      const correctEvent = event[prop] ?? event.locked;
       handleChanges(
         {
-          event: correctEvent,
+          event: correctEvent ?? prop,
           state: target,
           key: prop,
           value: null,
-          oldValue,
-          action: "delete",
-          interceptorAction: "allowAction"
+          action: "delete"
         },
         storeController
       );

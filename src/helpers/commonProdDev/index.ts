@@ -2,7 +2,6 @@ import { ALL } from "../../constants/internal";
 import {
   FunctionType,
   InterceptOptionsType,
-  InterceptorActionsType,
   StoreParamsType
 } from "../../types";
 import {
@@ -27,9 +26,9 @@ export function getData(target: string, storeParams: StoreParamsType) {
 
 export function callIfYouCan(
   options: InterceptOptionsType,
-  interceptorAction: InterceptorActionsType,
   callback: FunctionType
 ) {
+  const { interceptorAction } = options;
   if (interceptorAction === "override.value") {
     _checkInterceptorCall && _checkInterceptorCall(options, interceptorAction);
   }
@@ -39,5 +38,26 @@ export function callIfYouCan(
   if (interceptorAction === "override.keyAndValue") {
     _checkInterceptorCall && _checkInterceptorCall(options, interceptorAction);
   }
-  interceptorAction !== "rejectAction" && callback();
+  callback();
+}
+
+export function pathIsPreserved(event: string, getStore: any) {
+  const paths = createPath(event);
+  let preservePath = true;
+  getStore((store: any) => {
+    let result = { ...store };
+    for (let i = 0; i < paths.length; i++) {
+      try {
+        if (!(paths[i] in result)) {
+          preservePath = false;
+          break;
+        }
+      } catch (e) {
+        preservePath = false;
+        break;
+      }
+      result = result[paths[i]];
+    }
+  });
+  return preservePath;
 }

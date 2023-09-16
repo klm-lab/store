@@ -16,9 +16,13 @@ class Store {
     this.init = this.init.bind(this);
     this.initPrivate = this.initPrivate.bind(this);
     this.updateStore = this.updateStore.bind(this);
+    this.getDraft = this.getDraft.bind(this);
     this.getStore = this.getStore.bind(this);
     this.getActions = this.getActions.bind(this);
-    this._storeController = new StoreController(this.updateStore);
+    this._storeController = new StoreController(
+      this.updateStore,
+      this.getDraft
+    );
   }
 
   get storeController() {
@@ -35,6 +39,13 @@ class Store {
 
   updateStore() {
     this.#syncStore();
+  }
+  getDraft(callback: any) {
+    this.#getProxyStore(callback);
+  }
+
+  #getProxyStore(callback: any) {
+    callback(this._proxyStore);
   }
 
   #syncStore() {

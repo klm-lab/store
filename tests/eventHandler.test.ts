@@ -6,13 +6,7 @@ import { E_T, ERROR_TEXT } from "../src/constants/internal";
 test("Invalid listener", () => {
   const myStore = createStore({});
   const myStore2 = createStore({ data: {} });
-  expect(() => myStore.on("lala")).toThrowError(ERROR_TEXT.NOT_CHANGE_EVENT);
-  expect(() => myStore.on("change")).toThrowError(
-    ERROR_TEXT.NOT_VALID_CALLBACK
-  );
-  expect(() => myStore.on("change", undefined)).toThrowError(
-    ERROR_TEXT.NOT_VALID_CALLBACK
-  );
+
   expect(() => myStore.listen("fgfg", undefined)).toThrowError(
     ERROR_TEXT.STORE_PROPERTY_UNDEFINED.replace(E_T, "fgfg")
   );
@@ -31,6 +25,10 @@ test("Invalid listener", () => {
   );
   expect(() => myStore2.intercept("fgfg", undefined)).toThrowError(
     ERROR_TEXT.STORE_PROPERTY_UNDEFINED.replace(E_T, "fgfg")
+  );
+
+  expect(() => myStore2.intercept("data", undefined)).toThrowError(
+    ERROR_TEXT.NOT_VALID_CALLBACK
   );
 });
 
@@ -103,11 +101,11 @@ test("Test update on listener", () => {
   });
 
   const interceptCallback = vi.fn((store) => {
-    expect(store).toHaveProperty("intercepted");
-    expect(store).toHaveProperty("intercepted.value", 13);
-    expect(store).toHaveProperty("intercepted.state");
-    expect(store).toHaveProperty("intercepted.key");
-    expect(store).toHaveProperty("intercepted.event");
+    expect(store).toHaveProperty("interception");
+    expect(store).toHaveProperty("interception.value", 13);
+    expect(store).toHaveProperty("interception.update");
+    expect(store).toHaveProperty("interception.key");
+    expect(store).toHaveProperty("interception.event");
     expect(store).toHaveProperty("allowAction");
     expect(store).toHaveProperty("rejectAction");
     expect(store).toHaveProperty("override.value");
@@ -273,7 +271,8 @@ test("Test interceptor with override", () => {
     store.override.keyAndValue("newKey", 60);
   });
 
-  myStore.intercept("*", interceptCallback);
+  const allUns = myStore.intercept("*", interceptCallback);
+  myStore.listen("*", () => null);
   const unsub = myStore.intercept("content.step", interceptCallback2);
   myStore.intercept("content.step", interceptCallback2);
   myStore.intercept("content.step.value", interceptCallback3);
@@ -285,8 +284,11 @@ test("Test interceptor with override", () => {
   expect(myStore.getSnapshot().content.step).toHaveProperty("newKey", 60);
 
   const unsSpy = vi.fn(unsub);
+  const allUnsSpy = vi.fn(allUns);
   unsSpy();
+  allUnsSpy();
   expect(unsSpy).toBeCalled();
+  expect(allUnsSpy).toBeCalled();
 });
 
 test("Test interceptor with override only Key", () => {

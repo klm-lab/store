@@ -16,8 +16,8 @@ test("Actions snapshot values", () => {
 test("Data snapshot values", () => {
   const store = createStore({});
   const store2 = createStore({ data: 12, func: () => null });
-  const dataSnapshot = store.getDataSnapshot();
-  const dataSnapshot2 = store2.getDataSnapshot();
+  const dataSnapshot = store.getSnapshot();
+  const dataSnapshot2 = store2.getSnapshot();
   expect(dataSnapshot).toMatchObject({});
   expect(dataSnapshot2).toHaveProperty("data");
 });
@@ -27,7 +27,7 @@ test("Store snapshot values", () => {
   const store2 = createStore({ data: 12, func: () => null });
   const storeSnapshot = store.getSnapshot();
   const storeSnapshot2 = store2.getSnapshot();
-  const storeDatSnap = store2.getDataSnapshot();
+  const storeDatSnap = store2.getSnapshot();
   const storeActions = store2.getActions();
   expect(storeSnapshot).toMatchObject({});
   expect(storeSnapshot2).toHaveProperty("data", 12);

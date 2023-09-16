@@ -8,7 +8,13 @@ import { StoreController } from "../helpers/store";
  * We infer U to extend string to be sure that we call recursive NestedKey only with a string key
  * */
 type NestedKeyTypes<S> = {
-  [Key in keyof S & string]: S[Key] extends FunctionType
+  [Key in keyof S & string]: S[Key] extends
+    | Map<any, any>
+    | Date
+    | Set<any>
+    | Array<any>
+    ? Key
+    : S[Key] extends FunctionType
     ? never
     : S[Key] extends object
     ? `${Key}` | `${Key}.${NestedKeyTypes<S[Key]>}`
@@ -21,7 +27,7 @@ type NestedKeyTypes<S> = {
  * in case of a slice store, we have nestedKey and _ D
  * * as all data
  * */
-type TargetType<S> = NestedKeyTypes<S> | "*";
+type DataTargetType<S> = NestedKeyTypes<S> | "*";
 
 /* Return list a key that is not function.
  * We cast the result as [keyof S] to
@@ -163,7 +169,7 @@ type SliceStoreOutputType<S, K> = K extends keyof S
  * */
 type CustomSuggestionType<S, K> = K extends "*" ? DataOnlyType<S> : never;
 
-type InterceptActionType =
+type ProxyActionType =
   | "update"
   | "delete"
   | "deleteInSet"
@@ -181,17 +187,24 @@ interface OverrideType {
   keyAndValue(key: any, value: any): void;
 }
 
-interface InterceptDataType<S, TargetKey> {
-  intercepted: {
+interface InterceptionListener {
+  (store: InterceptDataType): void;
+}
+
+interface InterceptDataType {
+  interception: {
     key: any;
     event: string;
     value: any;
-    action: InterceptActionType;
-    updatedStore: any;
-    state: StoreOutputType<S, TargetKey>;
+    action: ProxyActionType;
+    update: any;
+    preservePath: boolean;
   };
+
   allowAction(): void;
+
   rejectAction(): void;
+
   override: OverrideType;
 }
 
@@ -200,16 +213,27 @@ type ChangeHandlerType = {
   state: any;
   key: any;
   value: any;
-  action: InterceptActionType;
+  oldValue: any;
+  action: ProxyActionType;
+  interceptorAction: InterceptorActionsType;
 };
 
 type InterceptOptionsType = {
   value: any;
   state: any;
   key: any;
+  interceptorAction: InterceptorActionsType;
   next: (options: InterceptOptionsType) => void;
-  action: InterceptActionType;
-  changePreview: any;
+  action: ProxyActionType;
+};
+
+type InterceptorsType = {
+  [k in string]: InterceptorType;
+};
+
+type InterceptorType = {
+  listener: InterceptionListener;
+  path: string;
 };
 
 type FunctionType = (...args: unknown[]) => unknown;
@@ -223,9 +247,9 @@ type FunctionType = (...args: unknown[]) => unknown;
  * we extract rootKey and chain nested ones
  * */
 type Store<S> = {
-  intercept: <TargetKey>(
-    event: TargetKey extends TargetType<S> ? TargetKey : TargetType<S>,
-    callback: (data: InterceptDataType<S, TargetKey>) => void
+  intercept: <TargetKey extends DataTargetType<S>>(
+    event: TargetKey,
+    callback: InterceptionListener
   ) => () => void;
   getActions: () => GetStoreType<S> extends "slice"
     ? // Slice store,we rewrite Function and merge data
@@ -246,12 +270,12 @@ type Store<S> = {
     : {
         [k in keyof S]: FunctionChainType<S[k]>;
       };
-  listen: <TargetKey>(
-    event: TargetKey extends TargetType<S> ? TargetKey : TargetType<S>,
+  listen: <TargetKey extends DataTargetType<S>>(
+    event: TargetKey,
     callback: (data: StoreOutputType<S, TargetKey>) => void
   ) => () => void;
   <TargetKey>(
-    target?: TargetKey extends TargetType<S> ? TargetKey : TargetType<S>
+    target?: TargetKey extends DataTargetType<S> ? TargetKey : DataTargetType<S>
     // check if target is passed, NonNullable help us by excluding null and undefined
   ): TargetKey extends NonNullable<string>
     ? // Target is present
@@ -307,9 +331,12 @@ export type {
   StoreType,
   InterceptorActionsType,
   InterceptOptionsType,
-  InterceptActionType,
+  ProxyActionType,
   ChangeHandlerType,
   StringObjectType,
   FunctionType,
-  InterceptDataType
+  InterceptDataType,
+  InterceptionListener,
+  InterceptorsType,
+  InterceptorType
 };

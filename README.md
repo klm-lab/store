@@ -747,22 +747,24 @@ Do not use them to update the UI, instead use <a href="#events">EVENTS</a> or
 ```js
 // If you want to unsubscribe later
 const unsubscribe = myStore.intercept("data.value", (store) => {
-  console.log(store.intercepted)
+  console.log(store.interception)
 })
 
 // if you do not want to unsubscribe later
 myStore.intercept("data.value", (store) => {
-  console.log(store.intercepted)
+  console.log(store.interception)
 })
 ```
 
-`store.intercepted` contains the intercepted data listed below:
+`store.interception` contains the intercepted data listed below:
 
-* `intercepted.key`: Target key, (the key of the data that request changes)
-* `intercepted.value`: The new value
-* `intercepted.state`: The part of the store that request changes
-* `intercepted.changePreview`: A preview of changes in the state
-* `intercepted.action`: The current action:
+* `interception.key`: Target key, (the key of the data that request changes)
+* `interception.value`: The new value
+* `interception.update`: The draft store that is updated.
+* `interception.preservePath`: Tell you if the path you intercept still exist
+  * Ex: you intercept `data.content` and suddenly `data` becomes `5`. Its affect you
+  because `content` no longer exists
+* `interception.action`: The intercepted action:
   * `update`: When you want to update something in your store
   * `addInSet`: When you want to add something to a Set collection in your store
   * `setInMap`: When you want to set something to a Map collection in your store
@@ -771,7 +773,7 @@ myStore.intercept("data.value", (store) => {
   * `deleteInMap`: When you want to delete something from a Map collection in your store
   * `clearInSet`: When you want to clear a Set collection in your store
   * `clearInMap`: When you want to clear a Map collection in your store
-* `intercepted.event`: The intercepted event
+* `interception.event`: The intercepted event
 
 With that, let's do some control.
 
@@ -781,7 +783,7 @@ We want to reject any clear method from our Map collection inside our store
 
 ```js
 myStore.intercept("data.map", (store) => {
-  if (store.intercepted.action !== "clearInMap") {
+  if (store.interception.action !== "clearInMap") {
     store.allowAction();
   } else {
     store.rejectAction()
@@ -793,7 +795,7 @@ myStore.intercept("data.map", (store) => {
 
 ```js
 myStore.intercept("data.value", (store) => {
-  if (store.intercepted.value < someMaxValue) {
+  if (store.interception.value < someMaxValue) {
     // We allow the action
     store.allowAction()
   }
@@ -806,7 +808,7 @@ myStore.intercept("data.value", (store) => {
 
 ```js
 myStore.intercept("data.value", (store) => {
-  if (store.intercepted.value === someMaxValue) {
+  if (store.interception.value === someMaxValue) {
     // We redirect changes to another key
     store.override.key("otherKey")
   }
@@ -818,7 +820,7 @@ myStore.intercept("data.value", (store) => {
 
 ```js
 myStore.intercept("data.value", (store) => {
-  if (store.intercepted.value === someMaxValue) {
+  if (store.interception.value === someMaxValue) {
     // We keep the key and change the value
     store.override.value("newValue")
   }
@@ -830,7 +832,7 @@ myStore.intercept("data.value", (store) => {
 
 ```js
 myStore.intercept("data.value", (store) => {
-  if (store.intercepted.value === someMaxValue) {
+  if (store.interception.value === someMaxValue) {
     // We redirect changes to another key with newValue
     store.override.keyAndValue("otherKey", "newValue")
   }
@@ -948,13 +950,13 @@ Our store value is `{data: {content: {value: 10 }}}`
 ```js
 myStore.intercept("data.content", (store) => {
     // We intercept a change where
-  if (store.intercepted.value === null) {
+  if (store.interception.value === null) {
     store.rejectAction() 
   } else store.allowAction()
 })
 myStore.intercept("data.content.value", (store) => {
   // We intercept a change where
-  if (store.intercepted.value > 10) {
+  if (store.interception.value > 10) {
     store.allowAction()
   } else store.rejectAction()
 })

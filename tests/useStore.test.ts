@@ -199,7 +199,7 @@ test("Test use store override deletion in Map and Set", () => {
 
   // testing deletion override
   myStore.intercept("dataMAp", (store) => {
-    if (store.intercepted.action !== "clearInMap") {
+    if (store.interception.action !== "clearInMap") {
       store.override.key("newKey");
     } else {
       store.allowAction();
@@ -207,7 +207,7 @@ test("Test use store override deletion in Map and Set", () => {
   });
 
   myStore.intercept("dataMAp2", (store) => {
-    if (!["deleteInMap", "clearInMap"].includes(store.intercepted.action)) {
+    if (!["deleteInMap", "clearInMap"].includes(store.interception.action)) {
       store.override.keyAndValue("newKey", 10);
     } else {
       store.allowAction();

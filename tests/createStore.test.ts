@@ -31,9 +31,8 @@ test("Valid store", () => {
 
   expect(myEmptyStore).toMatchObject({});
   expect(myStore()).toHaveProperty("test");
-  expect(myStore()).toHaveProperty("func");
   expect(groupStore()).toMatchObject({ testGroup: { data: 12 } });
-  expect(myStoreWithAction()).toHaveProperty("func");
+  expect(myStoreWithAction.getActions()).toHaveProperty("func");
   expect(getStoreSpy).toHaveReturned();
 });
 
@@ -42,11 +41,9 @@ test("Store has properties", () => {
   const storeWithFunc = createStore({ func: () => null });
   expect(store).toBeTypeOf("function");
   expect(store).toHaveProperty("dispatcher");
-  expect(store).toHaveProperty("on");
   expect(store).toHaveProperty("listen");
   expect(store).toHaveProperty("intercept");
   expect(store).toHaveProperty("getActions");
-  expect(store).toHaveProperty("getDataSnapshot");
   expect(store).toHaveProperty("getSnapshot");
   expect(storeWithFunc.dispatcher).toHaveProperty("func");
 });
