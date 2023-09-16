@@ -5,13 +5,11 @@ import type {
   InterceptorsType,
   InterceptorType
 } from "../../../types";
-import { callIfYouCan, pathIsPreserved } from "../../commonProdDev";
+import { isAllowedToCall, pathIsPreserved } from "../../commonProdDev";
 
 class StoreController {
   readonly #events: any;
   readonly #allListeners: Set<any>;
-  #interceptorForAll: InterceptorType | null;
-  #totalInterceptors: number;
   readonly #interceptors: InterceptorsType;
   readonly #updateStore: FunctionType;
   readonly #getDraft: FunctionType;
@@ -19,8 +17,6 @@ class StoreController {
   constructor(updateStore: FunctionType, getDraft: FunctionType) {
     this.#events = {};
     this.#allListeners = new Set();
-    this.#interceptorForAll = null;
-    this.#totalInterceptors = 0;
     this.#interceptors = {};
     this.#updateStore = updateStore;
     this.#getDraft = getDraft;
@@ -100,7 +96,7 @@ class StoreController {
   }
 
   /*
-   * We this util function to loop through event key
+   * We use this util function to loop through an event key
    * and register interceptor for all doted keys one by one.
    * When we say all doted keys, we talked about, 'data', 'data.content', 'data.content.value' and so on
    * We take, for example, the event 'data.someValue.other' and
@@ -127,27 +123,11 @@ class StoreController {
    * We count all interceptors for later.
    * */
   #handleInterceptorRegistering(event: string, listener: any) {
-    if (event === ALL) {
-      //Only one interceptor
-      this.#interceptorForAll = {
-        listener,
-        path: ALL
-      };
-      //Interceptors counter-increment
-      this.#totalInterceptors += 1;
-      return () => {
-        // We delete the interceptor
-        this.#interceptorForAll = null;
-        //Interceptors counter-decrement
-        this.#totalInterceptors -= 1;
-      };
-    }
     // We will use this util function to get all doted keys and proceed with registration
     this.#splitInterceptorEventByKey(event, (key: string) => {
       /* For every doted key. We check if an interceptor already exists.
        * If so, we check if the length of interceptor event is less than the new event.
        * If it is less, we override the old listener with the new one.
-       * Let me explain why we do that
        *
        * Suppose the first interceptor INT_ONE comes with event => "data.content.value",
        * Its listener is added to 'data', 'data.content' and  'data.content.value' as we learn.
@@ -157,15 +137,11 @@ class StoreController {
        * 'Data' has new listener, 'data.content' also, and 'data.content.value' keeps its old listener, and that is the problem.
        * Because INT_TWO can only care about him and allow some action that affect 'data.content.value'.
        *
-       * Also, remember this.
        * Every doted key far from the root key has priority on other keys
-       * So, when the length is greater, the old event has a lower priority. We need to override the oldInterceptor event with the new one.
-       * For next check.
-       *
-       * If the old event length and new event length are the same, then we keep the latest one
+       * So, when the length is greater, the old event has a lower priority. We need to override the old listener with the new one.
+       * For the next check, if the old event length and new event length are the same, then we keep the latest one
        *
        * And of course, if no listener is present, we just add the new one.
-       * We increment the total of interceptors for later
        *
        * */
       if (this.#interceptors[key]) {
@@ -191,8 +167,6 @@ class StoreController {
         };
       }
     });
-    //Interceptors counter-increment
-    this.#totalInterceptors += 1;
 
     // Unsubscription for Interceptors.
     return () => {
@@ -205,8 +179,6 @@ class StoreController {
           delete this.#interceptors[key];
         }
       });
-      //Interceptors counter-decrement
-      this.#totalInterceptors -= 1;
     };
   }
 
@@ -231,16 +203,28 @@ class StoreController {
     this.#handleInterceptors(options);
   }
 
-  /*
-   * This util calls the interceptor and gives him intercepted data plus
-   * and some actions which call other interceptors if they are present.
-   * If not, the decision of the first interceptor is executed
-   * */
+  #dispatchControlledAction(options: InterceptOptionsType) {
+    isAllowedToCall(options, () => {
+      options.next(options);
+      if (options.interceptorAction !== "rejectAction") {
+        this.#dispatch(options.event);
+      }
+    });
+  }
+
+  #handleInterceptors(options: InterceptOptionsType) {
+    const { event } = options;
+    if (event in this.#interceptors) {
+      this.#callInterceptor(this.#interceptors[event], options);
+      return;
+    }
+    options.next(options);
+    this.#dispatch(event);
+  }
+
   #callInterceptor(
-    event: string,
     interceptor: InterceptorType,
-    options: InterceptOptionsType,
-    nextAction: (options: InterceptOptionsType) => void
+    options: InterceptOptionsType
   ) {
     const { listener, path } = interceptor;
     const { preservePath, update } = pathIsPreserved(path, this.#getDraft);
@@ -250,114 +234,36 @@ class StoreController {
         update,
         key: options.key,
         action: options.action,
-        event,
+        event: options.event,
         preservePath
       },
       allowAction: () => {
         options.interceptorAction = "allowAction";
-        nextAction(options);
+        this.#dispatchControlledAction(options);
       },
       override: {
         value: (value?: any) => {
           options.value = value ?? options.value;
           options.interceptorAction = "override.value";
-          nextAction(options);
+          this.#dispatchControlledAction(options);
         },
         key: (key?: any) => {
           options.key = key ?? options.key;
           options.interceptorAction = "override.key";
-          nextAction(options);
+          this.#dispatchControlledAction(options);
         },
         keyAndValue: (key?: any, value?: any) => {
           options.key = key ?? options.key;
           options.value = value ?? options.value;
           options.interceptorAction = "override.keyAndValue";
-          nextAction(options);
+          this.#dispatchControlledAction(options);
         }
       },
       rejectAction: () => {
         options.interceptorAction = "rejectAction";
-        nextAction(options);
+        this.#dispatchControlledAction(options);
       }
     });
-  }
-
-  /*
-   * This is the final action performed after interceptor decisions
-   * */
-  #dispatchControlledAction(options: InterceptOptionsType) {
-    callIfYouCan(options, () => {
-      options.next(options);
-      if (options.interceptorAction !== "rejectAction") {
-        this.#dispatch(options.event);
-      }
-    });
-  }
-
-  /*
-   * Place to handle interceptors
-   * */
-  #handleInterceptors(options: InterceptOptionsType) {
-    /*
-     * This why we counted interceptors.
-     * If they are not present. We just allow the action and dispatch the event
-     * */
-    if (this.#totalInterceptors <= 0) {
-      options.next(options);
-      this.#dispatch(options.event);
-      return;
-    }
-    /*
-     * Interceptors are present, At least one.
-     * As we know, interceptors are registered on every key in the store.
-     * */
-
-    /* We define nextInterceptor.
-     * It takes options that can be changed by * interceptors if he exists
-     * We check if interceptor for All data listener is not the same as the specific one.
-     * If so, no need to call it again.
-     * We just continue with the action and dispatch.
-     * Else, we call the specific interceptor
-     * */
-    const nextInterceptor = (finalOptions: InterceptOptionsType) => {
-      const { event } = finalOptions;
-      if (
-        event in this.#interceptors &&
-        !(
-          this.#interceptorForAll?.listener ===
-          this.#interceptors[event].listener
-        )
-      ) {
-        this.#callInterceptor(
-          event,
-          this.#interceptors[event],
-          finalOptions,
-          /*
-           * When he's done, he will dispatch final decision
-           * */
-          this.#dispatchControlledAction
-        );
-      } else {
-        options.next(options);
-        this.#dispatch(event);
-      }
-    };
-
-    /*
-     * Before start anything, we first check if there is an interceptor for all data in the store.
-     * If so, we call it first and then ask him to call other interceptors if they exist.
-     * If another interceptor shares the same function, then they will not be called
-     * */
-    if (this.#interceptorForAll) {
-      this.#callInterceptor(
-        options.event,
-        this.#interceptorForAll,
-        options,
-        nextInterceptor
-      );
-      return;
-    }
-    nextInterceptor({ ...options });
   }
 }
 

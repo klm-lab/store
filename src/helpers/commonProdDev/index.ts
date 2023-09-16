@@ -25,7 +25,7 @@ export function getData(target: string, storeParams: StoreParamsType) {
   return result;
 }
 
-export function callIfYouCan(
+export function isAllowedToCall(
   options: InterceptOptionsType,
   callback: FunctionType
 ) {

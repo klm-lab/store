@@ -27,7 +27,9 @@ type NestedKeyTypes<S> = {
  * in case of a slice store, we have nestedKey and _ D
  * * as all data
  * */
-type DataTargetType<S> = NestedKeyTypes<S> | "*";
+type DataTargetType<S, E> = E extends "*"
+  ? NestedKeyTypes<S> | E
+  : NestedKeyTypes<S>;
 
 /* Return list a key that is not function.
  * We cast the result as [keyof S] to
@@ -248,7 +250,7 @@ type FunctionType = (...args: unknown[]) => unknown;
  * we extract rootKey and chain nested ones
  * */
 type Store<S> = {
-  intercept: <TargetKey extends DataTargetType<S>>(
+  intercept: <TargetKey extends DataTargetType<S, "">>(
     event: TargetKey,
     callback: InterceptionListener
   ) => () => void;
@@ -271,12 +273,14 @@ type Store<S> = {
     : {
         [k in keyof S]: FunctionChainType<S[k]>;
       };
-  listen: <TargetKey extends DataTargetType<S>>(
+  listen: <TargetKey extends DataTargetType<S, "*">>(
     event: TargetKey,
     callback: (data: StoreOutputType<S, TargetKey>) => void
   ) => () => void;
   <TargetKey>(
-    target?: TargetKey extends DataTargetType<S> ? TargetKey : DataTargetType<S>
+    target?: TargetKey extends DataTargetType<S, "*">
+      ? TargetKey
+      : DataTargetType<S, "*">
     // check if target is passed, NonNullable help us by excluding null and undefined
   ): TargetKey extends NonNullable<string>
     ? // Target is present

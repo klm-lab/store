@@ -70,13 +70,13 @@ function createProxyValidator(
          * If event[key] exists, that means,
          * For ex: {data: {value: 10}} has a change in 'value', event will be {value: "data.value.data"}
          * Then event[key] exist and correctEvent with be "data.value.data".
-         * If it doesn't exist we checked if some event is locked.
-         * For example : {data: {value: []}}. Data is an array and the key of that array will be 0, 1 , 2 ...
+         * If it doesn't exist, we checked if some event is locked.
+         * For example : {data: {value: []}}. Data is an array and the key of that array will be 0, 1, 2 ...
          * event["0"] will never exist in that case. So we take the locked event which is lock to value. and we dispatch
          * 'data.value'.
          * Something for empty object
          * Ex: data = {};
-         * then {}[someKey] doesn't exist so, we take the locked one.
+         * then {}[someKey] doesn't exist, so, we take the locked one.
          *
          * And now if the locked one doesn't exist also, like here, {}[key],
          * we take the key as event
@@ -89,7 +89,7 @@ function createProxyValidator(
          *     ...store.data.deep,
          *       // users custom change
          * }
-         * This will lead in maximum call size, exceeded. Assign proxy will be called again
+         * This will lead to the maximum call size error, exceeded. Assign proxy will be called again
          * and again and again
          */
         const newValue = removeObservableAndProxy(value);
@@ -161,8 +161,8 @@ function handleObservable(
 }
 
 /*
- * We create event with key and if you wonder why, it because of interceptor.
- * Without interceptors won't work as expected. Interceptor must intercept specific key
+ * We create event with a key and if you wonder why, it because of interceptor.
+ * Interceptors won't work as expected. Interceptor must intercept specific key
  * or all key if it is the user choice
  * */
 export function assignObservableAndProxy(
@@ -257,7 +257,7 @@ export function assignObservableAndProxy(
         assignObservableAndProxy(value, event, storeController, lockEvent)
       ];
     });
-    /* Entries are empty so, we locked the event
+    /* Entries are empty, so we locked the event
      * to nothing or default value ''. StoreController will dispatch 'all' listener
      * */
     if (entries.length <= 0) {
@@ -379,7 +379,7 @@ export function attachEvent(store: any, storeParams: StoreParamsType) {
     });
   };
   store.intercept = function (event: string, callback: any) {
-    _checkListenEvent && _checkListenEvent(event, callback, storeParams);
+    _checkListenEvent && _checkListenEvent(event, callback, storeParams, true);
     return storeParams.storeController.registerInterceptor(event, callback);
   };
   return store;

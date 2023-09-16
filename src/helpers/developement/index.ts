@@ -1,5 +1,5 @@
 import type { StoreParamsType } from "../../types";
-import { E_T, ERROR_TEXT } from "../../constants/internal";
+import { ALL, E_T, ERROR_TEXT } from "../../constants/internal";
 import { ErrorType, InterceptOptionsType } from "../../types";
 import { getData } from "../commonProdDev";
 
@@ -51,24 +51,26 @@ function checkStoreTarget(target?: string) {
 function checkListenEvent(
   event: string,
   callback: any,
-  storeParams: StoreParamsType
+  storeParams: StoreParamsType,
+  interception = false
 ) {
   if (
     (typeof event as unknown) !== "string" ||
     event === "" ||
     event === null ||
     event === undefined ||
-    typeof event === "undefined"
+    typeof event === "undefined" ||
+    (interception && event === ALL)
   ) {
     _utilError &&
       _utilError({
-        name: `Listen to event ${event}`,
+        name: `${interception ? "Intercept" : "Listen to"} event ${event}`,
         message: (ERROR_TEXT && ERROR_TEXT.NOT_VALID_EVENT) as string
       });
   }
   /* we call getData here just to check if data exist
    * It is for listener, since they did not get data immediately after registration.
-   * We need to check if registration is valid
+   * We need to check if the registration is valid
    */
   getData(event, storeParams);
   //Check callback
