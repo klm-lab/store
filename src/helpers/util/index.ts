@@ -1,6 +1,6 @@
 import { GROUP, SLICE } from "../../constants/internal";
-import type { StoreParamsType, StoreType } from "../../types";
-import { Store, StoreController } from "../store";
+import type { StoreType } from "../../types";
+import { InternalStore, StoreController } from "../store";
 import {
   _checkGroupStoreRootObject,
   _checkListenEvent,
@@ -197,7 +197,7 @@ export function getStoreType(store: any): StoreType {
       break;
     }
   }
-  // we check if key in store is an object
+  // we check if the key in store is an object
   storeType === GROUP &&
     _checkGroupStoreRootObject &&
     _checkGroupStoreRootObject(store);
@@ -262,38 +262,28 @@ export function isSame(value1: any, value2: any): boolean {
   return Object.is(value1, value2);
 }
 
-export function attachEvent(store: any, storeParams: StoreParamsType) {
-  store.listen = (event: string, callback: any) => {
-    _checkListenEvent && _checkListenEvent(event, callback, storeParams);
-    let snapShot = getData(event, storeParams);
-    return storeParams.storeController.subscribe(event, () => {
-      const newData = getData(event, storeParams);
+export function finalizeStore(userStore: any, internalStore: InternalStore) {
+  userStore.dispatcher = internalStore.getActions();
+  userStore.getActions = internalStore.getActions;
+  // attaching snapshot
+  userStore.getSnapshot = (target?: string) =>
+    getData(target as string, internalStore);
+  // attaching listener
+  userStore.listen = (event: string, callback: any) => {
+    _checkListenEvent && _checkListenEvent(event, callback, internalStore);
+    let snapShot = getData(event, internalStore);
+    return internalStore.storeController.subscribe(event, () => {
+      const newData = getData(event, internalStore);
       if (!isSame(snapShot, newData)) {
         snapShot = newData;
         callback(snapShot);
       }
     });
   };
-  return store;
+  return userStore;
 }
 
-export function finalizeStore(store: any, storeParams: StoreParamsType) {
-  store.dispatcher = storeParams.store.getActions();
-  store.getActions = storeParams.store.getActions;
-  store.getSnapshot = (target?: string) => {
-    return getData(target as string, storeParams);
-  };
-  return attachEvent(store, storeParams);
-}
-
-export function getNewStore<S>(store: S): StoreParamsType {
-  //_warnProdNodeENV && _warnProdNodeENV();
+export function getNewStore<S>(store: S): InternalStore {
   _validateStore && _validateStore(store);
-  const storeType = getStoreType(store);
-  const appStore = new Store();
-  appStore.init(store, storeType);
-  return {
-    store: appStore,
-    storeController: appStore.storeController
-  };
+  return new InternalStore().init(store, getStoreType(store));
 }

@@ -1,7 +1,7 @@
-import type { StoreParamsType } from "../../types";
 import { E_T, ERROR_TEXT } from "../../constants/internal";
 import { ErrorType } from "../../types";
 import { getData } from "../commonProdDev";
+import { InternalStore } from "../store";
 
 function validateStore(store: any, errorMessage?: string) {
   if (typeof store === "undefined" || store === null) {
@@ -51,7 +51,7 @@ function checkStoreTarget(target?: string) {
 function checkListenEvent(
   event: string,
   callback: any,
-  storeParams: StoreParamsType
+  internalStore: InternalStore
 ) {
   if (
     (typeof event as unknown) !== "string" ||
@@ -70,7 +70,7 @@ function checkListenEvent(
    * It is for listener, since they did not get data immediately after registration.
    * We need to check if the registration is valid
    */
-  getData(event, storeParams);
+  getData(event, internalStore);
   //Check callback
   if (typeof callback !== "function") {
     _utilError &&

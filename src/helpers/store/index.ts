@@ -3,7 +3,7 @@ import { StoreController } from "./controller";
 import type { StoreType } from "../../types";
 import { GROUP } from "../../constants/internal";
 
-class Store {
+class InternalStore {
   private _store: any;
   private _proxyStore: any;
   private _storeActions: any;
@@ -58,6 +58,7 @@ class Store {
 
   init(userStore: any, storeType: StoreType) {
     this.#initStore(userStore, storeType);
+    return this;
   }
 
   #initStore(userStore: any, storeType: StoreType) {
@@ -98,7 +99,7 @@ class Store {
           // This the action define by the user
           const userFunction = actionsSlice[key];
           //Now we recreate actions and passing data to be updated and all other user params
-          this._storeActions[userStoreKey][key] = (...values: any) => {
+          this._storeActions[userStoreKey][key] = (...values: unknown[]) => {
             userFunction(this._proxyStore[userStoreKey], ...values);
             return actionsSlice;
           };
@@ -139,4 +140,4 @@ class Store {
   }
 }
 
-export { Store, StoreController };
+export { InternalStore, StoreController };

@@ -1,4 +1,3 @@
-import { StoreController } from "../helpers/store";
 /*We exclude other types from suggestions
  * if the key extends one of these below, we return key else
  * We check if next nested key (S[key] extends object), then we join
@@ -234,11 +233,6 @@ type StoreDataAndActionsType = {
 
 type StoreType = "slice" | "group";
 
-type StoreParamsType = {
-  store: StoreDataAndActionsType;
-  storeController: StoreController;
-};
-
 type ErrorType = {
   name: string;
   message: string;
@@ -248,7 +242,6 @@ type ErrorType = {
 export type {
   Store,
   StoreDataAndActionsType,
-  StoreParamsType,
   ErrorType,
   StoreType,
   FunctionType,
