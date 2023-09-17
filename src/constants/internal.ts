@@ -15,6 +15,5 @@ export const ERROR_TEXT =
     OPTIONAL_INVALID_TARGET: `Target is optional. But it need to be valid if passed. Actual value is empty, fix it or remove it`,
     NOT_VALID_EVENT: `Provide a valid event`,
     NOT_VALID_CALLBACK: `Provide a valid callback, a function to be able to listen.`,
-    NO_NODE_ENV: `@klm-lab/store \n NODE_ENV value is neither production, nor development. Make sure to expose it with production value to be able to get the smallest and fastest version of @klm-lab/store on production build`,
-    CAN_NOT_BE_CALLED: `Current action not allow you to call ${E_T}`
+    NO_NODE_ENV: `@klm-lab/store \n NODE_ENV value is neither production, nor development. Make sure to expose it with production value to be able to get the smallest and fastest version of @klm-lab/store on production build`
   });

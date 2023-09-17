@@ -1,10 +1,5 @@
 import { GROUP, SLICE } from "../../constants/internal";
-import type {
-  ChangeHandlerType,
-  InterceptOptionsType,
-  StoreParamsType,
-  StoreType
-} from "../../types";
+import type { StoreParamsType, StoreType } from "../../types";
 import { Store, StoreController } from "../store";
 import {
   _checkGroupStoreRootObject,
@@ -13,51 +8,6 @@ import {
 } from "../developement";
 import { getData } from "../commonProdDev";
 import { ObservableSet, ObservableMap } from "../observable";
-
-function handleChanges(
-  params: ChangeHandlerType,
-  storeController: StoreController
-) {
-  const { event, state } = params;
-  let next: (options: InterceptOptionsType) => void;
-  if (params.action === "update") {
-    next = (options: InterceptOptionsType) => {
-      if (options.interceptorAction === "rejectAction") {
-        state[params.key] = params.oldValue;
-      } else {
-        /* Maybe it is an override.
-         * We restore old value
-         * */
-        state[params.key] = params.oldValue;
-        // We execute interceptor decision
-        state[options.key] = assignObservableAndProxy(
-          options.value,
-          event,
-          storeController
-        );
-      }
-    };
-  } else {
-    next = (options: InterceptOptionsType) => {
-      if (options.interceptorAction === "rejectAction") {
-        state[params.key] = params.oldValue;
-      } else {
-        console.log("ok", options.interceptorAction);
-        /* Maybe it is an override.
-         * We restore old value
-         * */
-        state[params.key] = params.oldValue;
-        // We execute interceptor decision
-        delete state[options.key];
-      }
-    };
-  }
-  storeController.handleDispatch({
-    ...params,
-    state: removeObservableAndProxy(state),
-    next
-  });
-}
 
 function createProxyValidator(event: any, storeController: StoreController) {
   return {
@@ -80,55 +30,20 @@ function createProxyValidator(event: any, storeController: StoreController) {
          * */
         const generatedEvent = event[key] ?? event.locked;
         const correctEvent = generatedEvent ?? key;
-        const oldValue = state[key];
-        /* We removePRoxy here because, user can copy proxy data and send it here.
-         * ex: store.data.deep = {
-         *     ...store.data.deep,
-         *       // users custom change
-         * }
-         * This will lead to the maximum call size error, exceeded. Assign proxy will be called again
-         * and again and again
-         */
-        const newValue = removeObservableAndProxy(value);
-        /* Temporary changes*/
-        state[key] = newValue;
-        /* Temporary changes*/
-
-        handleChanges(
-          {
-            event: correctEvent,
-            state,
-            key,
-            value: newValue,
-            oldValue,
-            action: "update",
-            interceptorAction: "allowAction"
-          },
+        state[key] = assignObservableAndProxy(
+          value,
+          correctEvent,
           storeController
         );
+        storeController.dispatch(correctEvent);
       }
       return true;
     },
     deleteProperty: (target: any, prop: any) => {
       const generatedEvent = event[prop] ?? event.locked;
       const correctEvent = generatedEvent ?? prop;
-      /* We keep old value as it is even if it is a proxy and will restore it
-       * if an interceptor rejects the action.
-       * */
-      const oldValue = target[prop];
-      // delete target[prop];
-      handleChanges(
-        {
-          event: correctEvent,
-          state: target,
-          key: prop,
-          value: null,
-          oldValue,
-          action: "delete",
-          interceptorAction: "allowAction"
-        },
-        storeController
-      );
+      delete target[prop];
+      storeController.dispatch(correctEvent);
       return true;
     }
   };
@@ -156,11 +71,6 @@ function handleObservable(
   return element;
 }
 
-/*
- * We create event with a key and if you wonder why, it because of interceptor.
- * Interceptors won't work as expected. Interceptor must intercept specific key
- * or all key if it is the user choice
- * */
 export function assignObservableAndProxy(
   data: any,
   event: string,
@@ -363,10 +273,6 @@ export function attachEvent(store: any, storeParams: StoreParamsType) {
         callback(snapShot);
       }
     });
-  };
-  store.intercept = (event: string, callback: any) => {
-    _checkListenEvent && _checkListenEvent(event, callback, storeParams, true);
-    return storeParams.storeController.registerInterceptor(event, callback);
   };
   return store;
 }

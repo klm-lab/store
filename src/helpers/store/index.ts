@@ -14,15 +14,10 @@ class Store {
     this._proxyStore = {};
     this._storeActions = {};
     this.init = this.init.bind(this);
-    this.initPrivate = this.initPrivate.bind(this);
     this.updateStore = this.updateStore.bind(this);
-    this.getDraft = this.getDraft.bind(this);
     this.getStore = this.getStore.bind(this);
     this.getActions = this.getActions.bind(this);
-    this._storeController = new StoreController(
-      this.updateStore,
-      this.getDraft
-    );
+    this._storeController = new StoreController(this.updateStore);
   }
 
   get storeController() {
@@ -39,18 +34,6 @@ class Store {
 
   updateStore() {
     this.#syncStore();
-  }
-
-  getDraft(callback: any) {
-    this.#getProxyStore(callback);
-  }
-
-  #getProxyStore(callback: any) {
-    /* todo try fixing problem with deletion
-     * use todo test.txt
-     * */
-
-    callback(removeObservableAndProxy(this._proxyStore));
   }
 
   #syncStore() {
@@ -81,7 +64,7 @@ class Store {
     if (storeType === GROUP) {
       this.#groupInit(userStore);
     } else {
-      this.initPrivate(userStore);
+      this.#sliceInit(userStore);
     }
   }
 
@@ -124,10 +107,6 @@ class Store {
     }
   }
 
-  initPrivate(params: any) {
-    this.#sliceInit(params);
-  }
-
   #sliceInit(params: any) {
     /*
      * We do not want to create proxy with functions.
@@ -157,7 +136,6 @@ class Store {
         return actions;
       };
     }
-    //this._storeController.createStoreEvent(this._privateStore, "");
   }
 }
 

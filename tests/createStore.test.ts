@@ -42,7 +42,6 @@ test("Store has properties", () => {
   expect(store).toBeTypeOf("function");
   expect(store).toHaveProperty("dispatcher");
   expect(store).toHaveProperty("listen");
-  expect(store).toHaveProperty("intercept");
   expect(store).toHaveProperty("getActions");
   expect(store).toHaveProperty("getSnapshot");
   expect(storeWithFunc.dispatcher).toHaveProperty("func");

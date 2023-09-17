@@ -1,6 +1,6 @@
 import type { StoreParamsType } from "../../types";
-import { ALL, E_T, ERROR_TEXT } from "../../constants/internal";
-import { ErrorType, InterceptOptionsType } from "../../types";
+import { E_T, ERROR_TEXT } from "../../constants/internal";
+import { ErrorType } from "../../types";
 import { getData } from "../commonProdDev";
 
 function validateStore(store: any, errorMessage?: string) {
@@ -51,20 +51,18 @@ function checkStoreTarget(target?: string) {
 function checkListenEvent(
   event: string,
   callback: any,
-  storeParams: StoreParamsType,
-  interception = false
+  storeParams: StoreParamsType
 ) {
   if (
     (typeof event as unknown) !== "string" ||
     event === "" ||
     event === null ||
     event === undefined ||
-    typeof event === "undefined" ||
-    (interception && event === ALL)
+    typeof event === "undefined"
   ) {
     _utilError &&
       _utilError({
-        name: `${interception ? "Intercept" : "Listen to"} event ${event}`,
+        name: `Listen to event ${event}`,
         message: (ERROR_TEXT && ERROR_TEXT.NOT_VALID_EVENT) as string
       });
   }
@@ -92,29 +90,6 @@ function checkListenEvent(
 //     console.warn(ERROR_TEXT && ERROR_TEXT.NO_NODE_ENV);
 //   }
 // }
-
-function checkInterceptorCall(options: InterceptOptionsType, name: string) {
-  const NOT_ALLOWED = {
-    "override.value": ["delete", "deleteInMap", "clearInSet", "clearInMap"],
-    "override.key": ["clearInSet", "clearInMap", "deleteInSet", "addInSet"],
-    "override.keyAndValue": [
-      "delete",
-      "clearInSet",
-      "clearInMap",
-      "deleteInSet",
-      "deleteInMap",
-      "addInSet"
-    ]
-  } as any;
-  if (NOT_ALLOWED[name].includes(options.action)) {
-    _utilError &&
-      _utilError({
-        name: `Override when action is ${options.action}`,
-        message: (ERROR_TEXT &&
-          ERROR_TEXT.CAN_NOT_BE_CALLED.replace(E_T as string, name)) as string
-      });
-  }
-}
 
 function checkConnectionToStore(result: any, paths: string[], p: string) {
   function error() {
@@ -155,8 +130,6 @@ export const _checkStoreTarget =
   process.env.NODE_ENV !== "production" && checkStoreTarget;
 // export const _warnProdNodeENV =
 //   process.env.NODE_ENV !== "production" && warnProdNodeENV;
-export const _checkInterceptorCall =
-  process.env.NODE_ENV !== "production" && checkInterceptorCall;
 export const _checkConnectionToStore =
   process.env.NODE_ENV !== "production" && checkConnectionToStore;
 export const _checkGroupStoreRootObject =

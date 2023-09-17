@@ -171,76 +171,8 @@ type SliceStoreOutputType<S, K> = K extends keyof S
  * */
 type CustomSuggestionType<S, K> = K extends "*" ? DataOnlyType<S> : never;
 
-type ProxyActionType =
-  | "update"
-  | "delete"
-  | "deleteInSet"
-  | "deleteInMap"
-  | "clearInSet"
-  | "clearInMap"
-  | "addInSet"
-  | "setInMap";
-
-interface OverrideType {
-  value(value: any): void;
-
-  key(key: any): void;
-
-  keyAndValue(key: any, value: any): void;
-}
-
-interface InterceptionListener {
-  (store: InterceptDataType): void;
-}
-
-interface InterceptDataType {
-  interception: {
-    key: any;
-    event: string;
-    value: any;
-    action: ProxyActionType;
-    update: any;
-    preservePath: boolean;
-  };
-
-  allowAction(): void;
-
-  rejectAction(): void;
-
-  override: OverrideType;
-}
-
-type ChangeHandlerType = {
-  event: string;
-  state: any;
-  key: any;
-  value: any;
-  oldValue: any;
-  action: ProxyActionType;
-  interceptorAction: InterceptorActionsType;
-};
-
-type InterceptOptionsType = {
-  event: string;
-  value: any;
-  state: any;
-  key: any;
-  interceptorAction: InterceptorActionsType;
-  next: (options: InterceptOptionsType) => void;
-  action: ProxyActionType;
-};
-
 type SubscribeType = {
   [k in string]: Set<FunctionType>;
-};
-
-type InterceptorsType = {
-  [k in string]: InterceptorType;
-};
-
-type InterceptorType = {
-  listener: InterceptionListener;
-  path: string;
 };
 
 type FunctionType = (...args: unknown[]) => unknown;
@@ -254,10 +186,6 @@ type FunctionType = (...args: unknown[]) => unknown;
  * we extract rootKey and chain nested ones
  * */
 type Store<S> = {
-  intercept: <TargetKey extends DataTargetType<S, "">>(
-    event: TargetKey,
-    callback: InterceptionListener
-  ) => () => void;
   getActions: () => GetStoreType<S> extends "slice"
     ? // Slice store,we rewrite Function and merge data
       FunctionChainType<S>
@@ -317,27 +245,12 @@ type ErrorType = {
   state?: any;
 };
 
-type InterceptorActionsType =
-  | "allowAction"
-  | "override.value"
-  | "override.key"
-  | "override.keyAndValue"
-  | "rejectAction";
-
 export type {
   Store,
   StoreDataAndActionsType,
   StoreParamsType,
   ErrorType,
   StoreType,
-  InterceptorActionsType,
-  InterceptOptionsType,
-  ProxyActionType,
-  ChangeHandlerType,
   FunctionType,
-  SubscribeType,
-  InterceptDataType,
-  InterceptionListener,
-  InterceptorType,
-  InterceptorsType
+  SubscribeType
 };

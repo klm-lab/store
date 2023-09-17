@@ -1,26 +1,15 @@
 import { ALL } from "../../../constants/internal";
-import type {
-  FunctionType,
-  InterceptOptionsType,
-  InterceptorsType,
-  InterceptorType,
-  SubscribeType
-} from "../../../types";
-import { isAllowedToCall, pathIsPreserved } from "../../commonProdDev";
+import type { FunctionType, SubscribeType } from "../../../types";
 
 class StoreController {
   readonly #events: SubscribeType;
   readonly #allListeners: Set<any>;
-  readonly #interceptors: InterceptorsType;
   readonly #updateStore: FunctionType;
-  readonly #getDraft: FunctionType;
 
-  constructor(updateStore: FunctionType, getDraft: FunctionType) {
+  constructor(updateStore: FunctionType) {
     this.#events = {};
     this.#allListeners = new Set();
-    this.#interceptors = {};
     this.#updateStore = updateStore;
-    this.#getDraft = getDraft;
   }
 
   subscribe(event: string, listener: any) {
@@ -70,21 +59,7 @@ class StoreController {
     };
   }
 
-  registerInterceptor(event: string, listener: any) {
-    return this.#handleInterceptorRegistering(event, listener);
-  }
-
-  #handleInterceptorRegistering(event: string, listener: any) {
-    const registeredEvent = event.split(".")[0];
-
-    this.#interceptors[registeredEvent] = {
-      path: event,
-      listener
-    };
-    return () => delete this.#interceptors[registeredEvent];
-  }
-
-  #dispatch(event: string) {
+  dispatch(event: string) {
     this.#updateStore();
     // we get the rootKey as event
     const registeredEvent = event.split(".")[0];
@@ -99,76 +74,6 @@ class StoreController {
     }
     // Call listeners relative to the event if someone subscribes
     this.#events[registeredEvent].forEach((listener: any) => listener());
-  }
-
-  handleDispatch(options: InterceptOptionsType) {
-    this.#handleInterceptors(options);
-  }
-
-  #dispatchControlledAction(options: InterceptOptionsType) {
-    isAllowedToCall(options, () => {
-      options.next(options);
-      if (options.interceptorAction !== "rejectAction") {
-        this.#dispatch(options.event);
-      }
-    });
-  }
-
-  #handleInterceptors(options: InterceptOptionsType) {
-    const { event } = options;
-    if (event in this.#interceptors) {
-      this.#callInterceptor(this.#interceptors[event], options);
-      return;
-    }
-    options.next(options);
-    this.#dispatch(event);
-  }
-
-  #callInterceptor(
-    interceptor: InterceptorType,
-    options: InterceptOptionsType
-  ) {
-    const { listener, path } = interceptor;
-    const { preservePath, update } = pathIsPreserved(path, this.#getDraft);
-    Promise.resolve(
-      listener({
-        interception: {
-          value: options.value,
-          update,
-          key: options.key,
-          action: options.action,
-          event: options.event,
-          preservePath
-        },
-        allowAction: () => {
-          options.interceptorAction = "allowAction";
-        },
-        override: {
-          value: (value?: any) => {
-            options.value = value ?? options.value;
-            options.interceptorAction = "override.value";
-          },
-          key: (key?: any) => {
-            options.key = key ?? options.key;
-            options.interceptorAction = "override.key";
-          },
-          keyAndValue: (key?: any, value?: any) => {
-            options.key = key ?? options.key;
-            options.value = value ?? options.value;
-            options.interceptorAction = "override.keyAndValue";
-          }
-        },
-        rejectAction: () => {
-          options.interceptorAction = "rejectAction";
-        }
-      })
-    ).then((action: any) => {
-      console.log("resolved", options.interceptorAction);
-      if (typeof action === "function") {
-        action();
-      }
-      this.#dispatchControlledAction(options);
-    });
   }
 }
 
