@@ -1,16 +1,16 @@
-import { StoreController } from "../store";
 import { assignObservableAndProxy, isSame } from "../util";
+import type { DispatchType } from "../../types";
 
 class ObservableMap extends Map {
   readonly #event: string;
   #init: boolean;
-  readonly #storeController: StoreController;
+  readonly #dispatch: DispatchType;
 
-  constructor(storeController: StoreController, event: string, init: boolean) {
+  constructor(dispatch: DispatchType, event: string, init: boolean) {
     super();
     this.#event = event;
     this.#init = init;
-    this.#storeController = storeController;
+    this.#dispatch = dispatch;
   }
 
   finishInit() {
@@ -22,13 +22,7 @@ class ObservableMap extends Map {
     if (this.#init) {
       super.set(
         key,
-        assignObservableAndProxy(
-          value,
-          //`${this.#event}.${key}`,
-          `${this.#event}`,
-          this.#storeController,
-          true
-        )
+        assignObservableAndProxy(value, `${this.#event}`, this.#dispatch, true)
       );
       return this;
     }
@@ -36,26 +30,21 @@ class ObservableMap extends Map {
     if (!isSame(super.get(key), value)) {
       super.set(
         key,
-        assignObservableAndProxy(
-          value,
-          `${this.#event}`,
-          this.#storeController,
-          true
-        )
+        assignObservableAndProxy(value, `${this.#event}`, this.#dispatch, true)
       );
-      this.#storeController.dispatch(this.#event);
+      this.#dispatch(this.#event);
     }
     return this;
   }
 
   clear() {
     super.clear();
-    this.#storeController.dispatch(this.#event);
+    this.#dispatch(this.#event);
   }
 
   delete(key: any) {
     super.delete(key);
-    this.#storeController.dispatch(this.#event);
+    this.#dispatch(this.#event);
     return true;
   }
 }
@@ -63,13 +52,13 @@ class ObservableMap extends Map {
 class ObservableSet extends Set {
   readonly #event: string;
   #init: boolean;
-  readonly #storeController: StoreController;
+  readonly #dispatch: DispatchType;
 
-  constructor(storeController: StoreController, event: string, init: boolean) {
+  constructor(dispatch: DispatchType, event: string, init: boolean) {
     super();
     this.#event = event;
     this.#init = init;
-    this.#storeController = storeController;
+    this.#dispatch = dispatch;
   }
 
   finishInit() {
@@ -80,38 +69,28 @@ class ObservableSet extends Set {
     // No dispatch on init
     if (this.#init) {
       super.add(
-        assignObservableAndProxy(
-          value,
-          this.#event,
-          this.#storeController,
-          true
-        )
+        assignObservableAndProxy(value, this.#event, this.#dispatch, true)
       );
       return this;
     }
 
     if (!super.has(value)) {
       super.add(
-        assignObservableAndProxy(
-          value,
-          this.#event,
-          this.#storeController,
-          true
-        )
+        assignObservableAndProxy(value, this.#event, this.#dispatch, true)
       );
-      this.#storeController.dispatch(this.#event);
+      this.#dispatch(this.#event);
     }
     return this;
   }
 
   clear() {
     super.clear();
-    this.#storeController.dispatch(this.#event);
+    this.#dispatch(this.#event);
   }
 
   delete(value: any) {
     super.delete(value);
-    this.#storeController.dispatch(this.#event);
+    this.#dispatch(this.#event);
     return true;
   }
 }

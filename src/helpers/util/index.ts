@@ -1,17 +1,10 @@
-import { GROUP, SLICE } from "../../constants/internal";
-import type { StoreType } from "../../types";
-import { InternalStore, StoreController } from "../store";
-import {
-  _checkGroupStoreRootObject,
-  _checkListenEvent,
-  _validateStore
-} from "../developement";
-import { getData } from "../commonProdDev";
+import type { InternalStore } from "../store";
 import { ObservableSet, ObservableMap } from "../observable";
+import type { DispatchType } from "../../types";
 
-function createProxyValidator(event: any, storeController: StoreController) {
+const createProxyValidator = (event: any, dispatch: DispatchType) => {
   return {
-    set: function (state: any, key: any, value: any) {
+    set: (state: any, key: any, value: any) => {
       if (!isSame(state[key], value)) {
         /* The correctEvent is find like this.
          * If event[key] exists, that means,
@@ -28,53 +21,44 @@ function createProxyValidator(event: any, storeController: StoreController) {
          * And now if the locked one doesn't exist also, like here, {}[key],
          * we take the key as event
          * */
-        const generatedEvent = event[key] ?? event.locked;
-        const correctEvent = generatedEvent ?? key;
-        state[key] = assignObservableAndProxy(
-          value,
-          correctEvent,
-          storeController
-        );
-        storeController.dispatch(correctEvent);
+        const correctEvent = event[key] ?? event.locked ?? key;
+        state[key] = assignObservableAndProxy(value, correctEvent, dispatch);
+        dispatch(correctEvent);
       }
       return true;
     },
     deleteProperty: (target: any, prop: any) => {
-      const generatedEvent = event[prop] ?? event.locked;
-      const correctEvent = generatedEvent ?? prop;
+      const correctEvent = event[prop] ?? event.locked ?? prop;
       delete target[prop];
-      storeController.dispatch(correctEvent);
+      dispatch(correctEvent);
       return true;
     }
   };
-}
+};
 
-function handleObservable(
+const handleObservable = (
   data: any,
   element: any,
   type: string,
   event: string | null,
-  storeController: StoreController | null
-) {
+  dispatch: DispatchType | null
+) => {
   data.forEach((v: any, k: any) => {
     if (type === "Map") {
-      element.set(
-        k,
-        event ? storeController && v : removeObservableAndProxy(v)
-      );
+      element.set(k, event ? dispatch && v : removeObservableAndProxy(v));
     }
     if (type === "Set") {
-      element.add(event ? storeController && v : removeObservableAndProxy(v));
+      element.add(event ? dispatch && v : removeObservableAndProxy(v));
     }
   });
   element.finishInit && element.finishInit();
   return element;
-}
+};
 
 export function assignObservableAndProxy(
   data: any,
   event: string,
-  storeController: StoreController,
+  dispatch: DispatchType,
   lockEvent = false,
   helper = {
     rootEvent: event,
@@ -84,10 +68,7 @@ export function assignObservableAndProxy(
   // console.log("entered with =>", event, helpers.rootEvent, typeof event);
   if (data && data.constructor.name === "Array") {
     helper.eventsObject.locked = event;
-    return new Proxy(
-      data,
-      createProxyValidator(helper.eventsObject, storeController)
-    );
+    return new Proxy(data, createProxyValidator(helper.eventsObject, dispatch));
   }
   if (data && data.constructor.name === "Map") {
     // console.warn("locked map event", event);
@@ -96,10 +77,10 @@ export function assignObservableAndProxy(
      * */
     return handleObservable(
       data,
-      new ObservableMap(storeController, event, true),
+      new ObservableMap(dispatch, event, true),
       "Map",
       event,
-      storeController
+      dispatch
     );
   }
   if (data && data.constructor.name === "Set") {
@@ -109,10 +90,10 @@ export function assignObservableAndProxy(
      * */
     return handleObservable(
       data,
-      new ObservableSet(storeController, event, true),
+      new ObservableSet(dispatch, event, true),
       "Set",
       event,
-      storeController
+      dispatch
     );
   }
   if (data && data.constructor.name === "Object") {
@@ -153,15 +134,12 @@ export function assignObservableAndProxy(
       } else {
         helper.eventsObject[key] = event;
       }
-      return [
-        key,
-        assignObservableAndProxy(value, event, storeController, lockEvent)
-      ];
+      return [key, assignObservableAndProxy(value, event, dispatch, lockEvent)];
     });
 
     return new Proxy(
       Object.fromEntries(entries),
-      createProxyValidator(helper.eventsObject, storeController)
+      createProxyValidator(helper.eventsObject, dispatch)
     );
   }
   return data;
@@ -186,23 +164,6 @@ export function removeObservableAndProxy(data: any) {
     return Object.fromEntries(entries);
   }
   return data;
-}
-
-export function getStoreType(store: any): StoreType {
-  let storeType: string = GROUP;
-  const STORE_KEYS = Object.keys(store);
-  for (let i = 0; i < STORE_KEYS.length; i++) {
-    if (typeof store[STORE_KEYS[i]] === "function") {
-      storeType = SLICE;
-      break;
-    }
-  }
-  // we check if the key in store is an object
-  storeType === GROUP &&
-    _checkGroupStoreRootObject &&
-    _checkGroupStoreRootObject(store);
-
-  return storeType as StoreType;
 }
 
 export function isSame(value1: any, value2: any): boolean {
@@ -262,18 +223,16 @@ export function isSame(value1: any, value2: any): boolean {
   return Object.is(value1, value2);
 }
 
-export function finalizeStore(userStore: any, internalStore: InternalStore) {
+export const finalizeStore = (userStore: any, internalStore: InternalStore) => {
   userStore.dispatcher = internalStore.getActions();
   userStore.getActions = internalStore.getActions;
   // attaching snapshot
-  userStore.getSnapshot = (target?: string) =>
-    getData(target as string, internalStore);
+  userStore.getSnapshot = (target?: string) => getData(internalStore, target);
   // attaching listener
   userStore.listen = (event: string, callback: any) => {
-    _checkListenEvent && _checkListenEvent(event, callback, internalStore);
-    let snapShot = getData(event, internalStore);
-    return internalStore.storeController.subscribe(event, () => {
-      const newData = getData(event, internalStore);
+    let snapShot = getData(internalStore, event);
+    return internalStore.subscribe(event, () => {
+      const newData = getData(internalStore, event);
       if (!isSame(snapShot, newData)) {
         snapShot = newData;
         callback(snapShot);
@@ -281,9 +240,13 @@ export function finalizeStore(userStore: any, internalStore: InternalStore) {
     });
   };
   return userStore;
-}
+};
 
-export function getNewStore<S>(store: S): InternalStore {
-  _validateStore && _validateStore(store);
-  return new InternalStore().init(store, getStoreType(store));
+export function getData(internalStore: InternalStore, target?: string) {
+  const paths = target ? (target === "*" ? [] : target.split(".")) : [];
+  let result = internalStore.getStore();
+  paths.forEach((p) => {
+    result = result ? result[p] : result;
+  });
+  return result;
 }

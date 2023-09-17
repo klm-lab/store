@@ -63,9 +63,11 @@ test("Test use store", () => {
     }
   });
   expect(() => myGroupStore("23232")).toThrowError(
-    ERROR_TEXT.STORE_PROPERTY_UNDEFINED.replace(E_T, "23232")
+    `23232 is undefined in the store.`
   );
-  expect(() => myStore("")).toThrowError(ERROR_TEXT.OPTIONAL_INVALID_TARGET);
+  expect(() => myStore("")).toThrowError(
+    "Target is optional. But it need to be valid if passed. Actual value is empty, fix it or remove it"
+  );
   expect(myStore.getActions()).not.toHaveProperty("value");
   expect(myStore.getActions()).not.toHaveProperty("group.value");
   expect(myStore.getActions()).not.toHaveProperty("group.value");

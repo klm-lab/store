@@ -15,36 +15,6 @@ State management for any javascript application. It's small, fast and stable, no
 context provider and compatible with SSR. Comes with zero dependencies and lets you dispatch actions from anywhere.
 Typescript user or Javascript user, it doesn't matter. It is all for you.<br/>
 
-<!-- TABLE OF CONTENTS 
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#installation">Installation</a>
-    </li>
-    <li>
-      <a href="#usage">Usage</a>
-      <ul>
-        <li>
-          <a href="#slice-store">Slice store</a>
-            <ul>
-              <li><a href="#create-a-not-organised-data-store">Not organised data</a></li>
-              <li><a href="#create-an-organised-data-store">Organised data</a></li>
-              <li><a href="#use-the-store">Use the store</a></li>
-              <li><a href="#autocomplete-or-intellisense">Autocomplete or intellisense</a></li>
-              <li><a href="#extract-actions-or-data">Extract actions or data</a></li>
-              <li><a href="#performance">Performance</a></li>
-              <li><a href="#chain-actions-call-issue">Chain actions call issue</a></li>
-            </ul>
-        </li>
-        <li><a href="#group-store">Group store</a></li>
-        <li><a href="#external-dispatcher">External dispatcher</a></li>
-      </ul>
-    </li>
-    <li><a href="#license">License</a></li>
-  </ol>
-</details>-->
-
 ## Installation
 
 ```sh
@@ -65,17 +35,14 @@ import { createStore } from "aio-store";
 import { createStore } from "aio-store/react";
 ```
 
-With that, you can create a store (slice store) or a group of stores.
+### Create a store
 
-### Slice store
-
-A slice store is just a part of your store. You can divide your store into several slices, or combine slices into one
-large store.<br> When you create a store, you can organize your data or mix it with actions. The choice is yours. But all
+When you create a store, you can organize your data or mix it with actions. The choice is yours. But all
 actions must be at root level.<br> In your actions, the first parameter
 will always be the store reference, his name is yours. If you want to pass other parameters, add them after the first
 parameter.
 
-#### Mixed slice store
+#### Mixed store
 
 ```js
 export const useExpStore = createStore({
@@ -83,7 +50,7 @@ export const useExpStore = createStore({
   exp: 10,
   // An action
   updateExp: (storeRef, myParam, ...rest) => {
-    //slice is the store data. {exp: 10, deep: ...}
+    // storeRef point to {exp: 10, deep: ...}
     storeRef.exp += myParam;
   },
   // a data
@@ -95,7 +62,7 @@ export const useExpStore = createStore({
     }
   },
   updateDeep: (storeRef) => {
-    //slice is the store data. {exp: 10, deep: ...}
+    // storeRef point to {exp: 10, deep: ...}
     storeRef.deep.moreDeep.evenDeep.data = "Ok we got you";
   },
   // ...more data
@@ -104,7 +71,7 @@ export const useExpStore = createStore({
 
 ```
 
-#### Organized slice store
+#### Organized store
 
 * We group all data in `data`
 
@@ -126,7 +93,6 @@ export const useExpStore = createStore({
     storeRef.data.exp += 1;
   },
   updateDeep: (storeRef) => {
-    //slice is the store data. {exp: 10, deep: ...}
     storeRef.data.deep.moreDeep.evenDeep.data = "Ok we got you";
   },
   // ...more actions
@@ -151,83 +117,10 @@ export const useExpStore = createStore({
     storeRef.exp += 1;
   },
   updateDeep: (storeRef) => {
-    //slice is the store data. {exp: 10, deep: ...}
     storeRef.data.deep.moreDeep.evenDeep.data = "Ok we got you";
   },
   // ...more actions
 });
-
-```
-
-### Group of stores
-
-```js
-import { createStore } from "aio-store"
-
-// A group that contain modal and notification
-export const useGroupStore = createStore({
-  // modal slice
-  modal: {
-    isOpen: false,
-    openModal: (modalStore) => {
-      modalStore.isOpen = true
-    }
-  },
-  // notification slice
-  notification: {
-    message: "Empty",
-    updateNotificationMessage: (notificationStore) => {
-      notificationStore.message = "Hi, I am here to notify you"
-    }
-  }
-
-})
-```
-> We do not enforce rules on your store architecture except for actions.
-> * First level of your store for a slice,
-> * Group-first level for a group of stores.
-
-```js
-// ✅ This is good
-const sliceStore = {
-  ...myData,
-  ...myActions,
-}
-// ✅ This is good. Reversing order is fine
-const sliceStore = {
-  ...myActions,
-  ...myData
-}
-// ✅ This is good.
-const myGroupStore = {
-  groupOne: {
-    ...groupOneData,
-    ...groupOneActions
-  },
-  groupTwo: {
-    ...groupTwoData,
-    ...groupTwoActions
-  }
-}
-
-// ❌ This is bad for sliceStore and will be converted to a group by the system
-const sliceStore = {
-  ...mydata,
-  someData: {
-    ...myActions
-  },
-}
-
-// ❌ This is bad for groupStore and will be converted to a slice by the system
-const myGroupStore = {
-  groupOne: {
-    ...groupOneData,
-    ...groupOneActions
-  },
-  ...myActions
-}
-
-export const useStore = createStore(sliceStore | myGroupStore)
 ```
 
 #### Promise in actions
@@ -424,7 +317,7 @@ Skip this step if you are using event listener. Every listener is free from HOOK
 
 ## Available tools and options
 
-* `createStore` Let you create a store by passing a slice or a group of data and actions.
+* `createStore` Let you create a store
 * `dispatcher` A property attached to your store that lets you dispatch actions from any file.
 * `getSnapshot` A Function attached to your store that lets you get a snapshot of your store at any time.
 * `getDataSnapshot` A Function attached to your store that lets you get a snapshot that only contains the data of your store at any time.

@@ -61,6 +61,7 @@
     "@size-limit/preset-small-lib": "^8.2.6",
     "@types/node": "^20.5.6",
     "@types/react": "^18.2.20",
+    "@types/webpack-bundle-analyzer": "^4.6.0",
     "@typescript-eslint/eslint-plugin": "^6.3.0",
     "@typescript-eslint/parser": "^6.3.0",
     "@vitest/coverage-v8": "^0.34.4",
@@ -77,6 +78,7 @@
     "typescript": "^5.2.2",
     "vitest": "^0.34.4",
     "webpack": "^5.88.2",
+    "webpack-bundle-analyzer": "^4.9.1",
     "webpack-cli": "^5.1.4"
   },
   "publishConfig": {

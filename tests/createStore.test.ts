@@ -2,20 +2,13 @@
 // @ts-nocheck
 import { createStore } from "../src";
 import { test, expect, vi } from "vitest";
-import { E_T, ERROR_TEXT } from "../src/constants/internal";
-
 test("Invalid store", () => {
-  expect(() => createStore(undefined)).toThrowError(
-    ERROR_TEXT && ERROR_TEXT.STORE_EMPTY
-  );
-  expect(() => createStore(null)).toThrowError(ERROR_TEXT.STORE_EMPTY);
-  expect(() => createStore("")).toThrowError(ERROR_TEXT.STORE_NOT_OBJECT);
-  expect(() => createStore(5)).toThrowError(ERROR_TEXT.STORE_NOT_OBJECT);
-  expect(() => createStore(0)).toThrowError(ERROR_TEXT.STORE_NOT_OBJECT);
-  expect(() => createStore(true)).toThrowError(ERROR_TEXT.STORE_NOT_OBJECT);
-  expect(() => createStore({ data: 12 })).toThrowError(
-    ERROR_TEXT.GROUP_STORE_NOT_OBJECT.replace(E_T, "data")
-  );
+  expect(() => createStore(undefined)).toThrowError("The store is empty");
+  expect(() => createStore(null)).toThrowError("The store is empty");
+  expect(() => createStore("")).toThrowError("The store is not an object");
+  expect(() => createStore(5)).toThrowError("The store is not an object");
+  expect(() => createStore(0)).toThrowError("The store is not an object");
+  expect(() => createStore(true)).toThrowError("The store is not an object");
 });
 
 test("Valid store", () => {

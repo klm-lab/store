@@ -2,25 +2,24 @@
 // @ts-nocheck
 import { createStore } from "../src";
 import { test, expect, vi } from "vitest";
-import { E_T, ERROR_TEXT } from "../src/constants/internal";
 
 test("Invalid listener", () => {
   const myStore = createStore({});
   const myStore2 = createStore({ data: {} });
 
   expect(() => myStore.listen("fgfg", undefined)).toThrowError(
-    ERROR_TEXT.STORE_PROPERTY_UNDEFINED.replace(E_T, "fgfg")
+    `fgfg is undefined in the store.`
   );
   expect(() => myStore.listen(56, undefined)).toThrowError(
-    ERROR_TEXT.NOT_VALID_LISTEN_EVENT
+    "Provide a valid event"
   );
 
   expect(() => myStore2.listen("data", undefined)).toThrowError(
-    ERROR_TEXT.NOT_VALID_CALLBACK
+    "Provide a valid callback, a function to be able to listen."
   );
 
   expect(() => myStore2.listen("fgfg", undefined)).toThrowError(
-    ERROR_TEXT.STORE_PROPERTY_UNDEFINED.replace(E_T, "fgfg")
+    `fgfg is undefined in the store.`
   );
 });
 

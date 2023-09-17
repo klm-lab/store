@@ -3,6 +3,7 @@
 import { vanillaConfig } from "./webpack.config";
 import CopyWebpackPlugin from "copy-webpack-plugin";
 import path from "path";
+import { BundleAnalyzerPlugin } from "webpack-bundle-analyzer";
 
 module.exports = {
   ...vanillaConfig,
@@ -27,6 +28,7 @@ module.exports = {
           to: path.resolve(__dirname, "lib/README.md")
         }
       ]
-    })
+    }),
+    new BundleAnalyzerPlugin()
   ]
 };
