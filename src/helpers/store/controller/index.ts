@@ -3,12 +3,13 @@ import type {
   FunctionType,
   InterceptOptionsType,
   InterceptorsType,
-  InterceptorType
+  InterceptorType,
+  SubscribeType
 } from "../../../types";
 import { isAllowedToCall, pathIsPreserved } from "../../commonProdDev";
 
 class StoreController {
-  readonly #events: any;
+  readonly #events: SubscribeType;
   readonly #allListeners: Set<any>;
   readonly #interceptors: InterceptorsType;
   readonly #updateStore: FunctionType;
@@ -69,117 +70,18 @@ class StoreController {
     };
   }
 
-  /*
-   * Registering an interceptor.
-   * Interceptors are unique per key.
-   * If an interceptor is registered for all data in the store, then it will be unique.
-   * Same thing for specific data interceptor.
-   * But to register them, we need all keys that are available in the store.
-   * This is why for.
-   * Suppose an interceptor 'INT_ONE' that intercept 'data.content.value'.
-   * It will be called if 'data.content.value' or 'data.content'
-   * or 'data' or anything inside 'data.content.value' changes.
-   * We need to register the interceptor function on all these keys.
-   * 'Data' will have it, 'data.content' will have it, 'data.content.value' will have it
-   * and if 'data.content.value' is an object, then anything inside 'data.content.value' will have it.
-   *
-   * But if another interceptor 'INT_TWO' wants to intercept 'data', for example,
-   * Its function will be ignored.
-   * This is for avoiding calling two interceptors at the same time.
-   * Every interceptor far from the rootKey will have the priority on others.
-   * Once they finish their work, if they allow the operations, other interceptors will be called if they are present.
-   * If they reject the action, then everything stops there
-   *
-   * */
   registerInterceptor(event: string, listener: any) {
     return this.#handleInterceptorRegistering(event, listener);
   }
 
-  /*
-   * We use this util function to loop through an event key
-   * and register interceptor for all doted keys one by one.
-   * When we say all doted keys, we talked about, 'data', 'data.content', 'data.content.value' and so on
-   * We take, for example, the event 'data.someValue.other' and
-   * we get 'data', 'data.someValue' and 'data.someValue.other'. 3 doted keys from the event.
-   * When we create a doted key, we call the registering action to register the listener with that doted key.
-   *
-   * action(key) where key = key === firstElementInArray ? firstElementInArray : `${key}.${firstElementInArray}`;
-   * */
-  #splitInterceptorEventByKey(event: string, action: any) {
-    const eventTab = event.split(".");
-    let key = eventTab[0];
-    eventTab.forEach((e) => {
-      key = key === e ? e : `${key}.${e}`;
-      action(key);
-    });
-  }
-
-  /*
-   * Now time to registering.
-   * Again, if event is all that means, this interceptor will intercept all data.
-   * But unlike subscription, allInterceptors are not a collection,
-   * Remember interceptors are unique. So we override the value.
-   * Only one interceptor per value intercepted.
-   * We count all interceptors for later.
-   * */
   #handleInterceptorRegistering(event: string, listener: any) {
-    // We will use this util function to get all doted keys and proceed with registration
-    this.#splitInterceptorEventByKey(event, (key: string) => {
-      /* For every doted key. We check if an interceptor already exists.
-       * If so, we check if the length of interceptor event is less than the new event.
-       * If it is less, we override the old listener with the new one.
-       *
-       * Suppose the first interceptor INT_ONE comes with event => "data.content.value",
-       * Its listener is added to 'data', 'data.content' and  'data.content.value' as we learn.
-       * Fine. Now another interceptor INT_TWO comes with this event => 'data.content'.
-       * We do the same thing as adding its listener to 'data' and 'data.content'.
-       *
-       * 'Data' has new listener, 'data.content' also, and 'data.content.value' keeps its old listener, and that is the problem.
-       * Because INT_TWO can only care about him and allow some action that affect 'data.content.value'.
-       *
-       * Every doted key far from the root key has priority on other keys
-       * So, when the length is greater, the old event has a lower priority. We need to override the old listener with the new one.
-       * For the next check, if the old event length and new event length are the same, then we keep the latest one
-       *
-       * And of course, if no listener is present, we just add the new one.
-       *
-       * */
-      if (this.#interceptors[key]) {
-        // Higher priority event found. We override interceptor
-        if (this.#interceptors[key].path.length < event.length) {
-          this.#interceptors[key] = {
-            listener,
-            path: event
-          };
-        }
-        // Same length, same job, we can only keep one, and we will keep the latest one
-        if (this.#interceptors[key].path === event) {
-          this.#interceptors[key] = {
-            listener,
-            path: event
-          };
-        }
-      } else {
-        // New interceptor
-        this.#interceptors[key] = {
-          listener,
-          path: event
-        };
-      }
-    });
+    const registeredEvent = event.split(".")[0];
 
-    // Unsubscription for Interceptors.
-    return () => {
-      /*
-       * We loop through the doted key and check if the listener is the current listener.
-       * If so, we delete it
-       * */
-      this.#splitInterceptorEventByKey(event, (key: string) => {
-        if (this.#interceptors[key].listener === listener) {
-          delete this.#interceptors[key];
-        }
-      });
+    this.#interceptors[registeredEvent] = {
+      path: event,
+      listener
     };
+    return () => delete this.#interceptors[registeredEvent];
   }
 
   #dispatch(event: string) {

@@ -230,6 +230,10 @@ type InterceptOptionsType = {
   action: ProxyActionType;
 };
 
+type SubscribeType = {
+  [k in string]: Set<FunctionType>;
+};
+
 type InterceptorsType = {
   [k in string]: InterceptorType;
 };
@@ -261,13 +265,9 @@ type Store<S> = {
       {
         [k in keyof S]: FunctionChainType<S[k]>;
       };
-  getSnapshot: () => GetStoreType<S> extends "slice"
-    ? // Slice store,we rewrite Function and merge data
-      DataOnlyType<S>
-    : // Group store, we extract the first key then rewrite S[key] Function and merge S[key] data
-      {
-        [k in keyof S]: DataOnlyType<S[k]>;
-      };
+  getSnapshot: <TargetKey extends DataTargetType<S, "*">>(
+    target?: TargetKey
+  ) => StoreOutputType<S, TargetKey>;
   dispatcher: GetStoreType<S> extends "slice"
     ? FunctionChainType<S>
     : {
@@ -317,10 +317,6 @@ type ErrorType = {
   state?: any;
 };
 
-type StringObjectType = {
-  [k in string]: string;
-};
-
 type InterceptorActionsType =
   | "allowAction"
   | "override.value"
@@ -338,10 +334,10 @@ export type {
   InterceptOptionsType,
   ProxyActionType,
   ChangeHandlerType,
-  StringObjectType,
   FunctionType,
+  SubscribeType,
   InterceptDataType,
   InterceptionListener,
-  InterceptorsType,
-  InterceptorType
+  InterceptorType,
+  InterceptorsType
 };

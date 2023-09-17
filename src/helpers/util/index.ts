@@ -3,8 +3,7 @@ import type {
   ChangeHandlerType,
   InterceptOptionsType,
   StoreParamsType,
-  StoreType,
-  StringObjectType
+  StoreType
 } from "../../types";
 import { Store, StoreController } from "../store";
 import {
@@ -59,10 +58,7 @@ function handleChanges(
   });
 }
 
-function createProxyValidator(
-  event: StringObjectType,
-  storeController: StoreController
-) {
+function createProxyValidator(event: any, storeController: StoreController) {
   return {
     set: function (state: any, key: any, value: any) {
       if (!isSame(state[key], value)) {
@@ -115,7 +111,6 @@ function createProxyValidator(
     deleteProperty: (target: any, prop: any) => {
       const generatedEvent = event[prop] ?? event.locked;
       const correctEvent = generatedEvent ?? prop;
-
       /* We keep old value as it is even if it is a proxy and will restore it
        * if an interceptor rejects the action.
        * */
@@ -170,21 +165,17 @@ export function assignObservableAndProxy(
   event: string,
   storeController: StoreController,
   lockEvent = false,
-  helpers = {
+  helper = {
     rootEvent: event,
-    eventsObject: {} as StringObjectType
+    eventsObject: {} as any
   }
 ) {
   // console.log("entered with =>", event, helpers.rootEvent, typeof event);
   if (data && data.constructor.name === "Array") {
-    /* Data is an array we locked the event
-     * to array holder, ex: {arr: []}, we locked event to 'arr'.
-     * StoreController will always dispatch 'arr' for every action inside the array
-     * */
-    helpers.eventsObject.locked = event;
+    helper.eventsObject.locked = event;
     return new Proxy(
       data,
-      createProxyValidator(helpers.eventsObject, storeController)
+      createProxyValidator(helper.eventsObject, storeController)
     );
   }
   if (data && data.constructor.name === "Map") {
@@ -245,27 +236,21 @@ export function assignObservableAndProxy(
        * */
 
       if (!lockEvent) {
-        event =
-          helpers.rootEvent !== "" ? `${helpers.rootEvent}.${key}` : `${key}`;
-        // console.log("creating event =>", event);
-        helpers.eventsObject[key] = event;
+        event = helper.rootEvent !== "" ? `${helper.rootEvent}` : `${key}`;
+        // console.log("creating event =>", event, helper.eventsObject);
+        helper.eventsObject[key] = event;
       } else {
-        helpers.eventsObject[key] = event;
+        helper.eventsObject[key] = event;
       }
       return [
         key,
         assignObservableAndProxy(value, event, storeController, lockEvent)
       ];
     });
-    /* Entries are empty, so we locked the event
-     * to nothing or default value ''. StoreController will dispatch 'all' listener
-     * */
-    if (entries.length <= 0) {
-      helpers.eventsObject.locked = event;
-    }
+
     return new Proxy(
       Object.fromEntries(entries),
-      createProxyValidator(helpers.eventsObject, storeController)
+      createProxyValidator(helper.eventsObject, storeController)
     );
   }
   return data;
@@ -367,7 +352,7 @@ export function isSame(value1: any, value2: any): boolean {
 }
 
 export function attachEvent(store: any, storeParams: StoreParamsType) {
-  store.listen = function (event: string, callback: any) {
+  store.listen = (event: string, callback: any) => {
     _checkListenEvent && _checkListenEvent(event, callback, storeParams);
     let snapShot = getData(event, storeParams);
     return storeParams.storeController.subscribe(event, () => {
@@ -378,7 +363,7 @@ export function attachEvent(store: any, storeParams: StoreParamsType) {
       }
     });
   };
-  store.intercept = function (event: string, callback: any) {
+  store.intercept = (event: string, callback: any) => {
     _checkListenEvent && _checkListenEvent(event, callback, storeParams, true);
     return storeParams.storeController.registerInterceptor(event, callback);
   };
@@ -388,7 +373,9 @@ export function attachEvent(store: any, storeParams: StoreParamsType) {
 export function finalizeStore(store: any, storeParams: StoreParamsType) {
   store.dispatcher = storeParams.store.getActions();
   store.getActions = storeParams.store.getActions;
-  store.getSnapshot = storeParams.store.getStore;
+  store.getSnapshot = (target?: string) => {
+    return getData(target as string, storeParams);
+  };
   return attachEvent(store, storeParams);
 }
 
