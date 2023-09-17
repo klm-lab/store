@@ -42,6 +42,7 @@ function handleChanges(
       if (options.interceptorAction === "rejectAction") {
         state[params.key] = params.oldValue;
       } else {
+        console.log("ok", options.interceptorAction);
         /* Maybe it is an override.
          * We restore old value
          * */
@@ -115,7 +116,7 @@ function createProxyValidator(event: any, storeController: StoreController) {
        * if an interceptor rejects the action.
        * */
       const oldValue = target[prop];
-      delete target[prop];
+      // delete target[prop];
       handleChanges(
         {
           event: correctEvent,

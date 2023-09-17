@@ -58,35 +58,35 @@ Typescript user or Javascript user, it doesn't matter. It is all for you.<br/>
 ##### First import createStore
 
 ```js
-//Vanilla js
+// All users, No hook
 import { createStore } from "aio-store";
 
-// React user
+// React user with hook
 import { createStore } from "aio-store/react";
 ```
 
-With that, you can create two types of store.
-
-* **Slice store**: A store that minds his own business
-* **Grouped store**: A group of slice stores.
+With that, you can create a store (slice store) or a group of stores.
 
 ### Slice store
 
 A slice store is just a part of your store. You can divide your store into several slices, or combine slices into one
-large
-store.<br> When you create a store, you can organize your data or mix it with actions. The choice is yours. But all
-actions must be at
-root level.<br> In your actions, the first parameter
-will always be the store data, his name is yours. If you want to pass other parameters, add them after the first
-parameter.<br> Find out more here:
-<a href="#passing-parameter-to-actions">Passing parameters</a>.<br> Let's take the following example
+large store.<br> When you create a store, you can organize your data or mix it with actions. The choice is yours. But all
+actions must be at root level.<br> In your actions, the first parameter
+will always be the store reference, his name is yours. If you want to pass other parameters, add them after the first
+parameter.
 
-#### Create a not organised data store
+#### Mixed slice store
 
 ```js
 export const useExpStore = createStore({
   // a data
   exp: 10,
+  // An action
+  updateExp: (storeRef, myParam, ...rest) => {
+    //slice is the store data. {exp: 10, deep: ...}
+    storeRef.exp += myParam;
+  },
+  // a data
   deep: {
     moreDeep: {
       evenDeep: {
@@ -94,16 +94,9 @@ export const useExpStore = createStore({
       }
     }
   },
-  // An action
-  updateExp: (slice) => {
+  updateDeep: (storeRef) => {
     //slice is the store data. {exp: 10, deep: ...}
-    slice.exp += 1;
-  },
-  // a data
-  working: true,
-  updateDeep: (slice) => {
-    //slice is the store data. {exp: 10, deep: ...}
-    slice.deep.moreDeep.evenDeep.data = "Ok we got you";
+    storeRef.deep.moreDeep.evenDeep.data = "Ok we got you";
   },
   // ...more data
   // ...more actions
@@ -111,13 +104,9 @@ export const useExpStore = createStore({
 
 ```
 
-As you see, data and actions are mixed together and unordered. It is not a problem it will work. 😀
+#### Organized slice store
 
-#### Create an organized data store
-
-You can write all data at root level, followed by actions, or group your data like this
-
-* Organised slice with grouped data
+* We group all data in `data`
 
 ```js
 export const useExpStore = createStore({
@@ -133,18 +122,18 @@ export const useExpStore = createStore({
     }
     //...more data
   },
-  updateExp: (slice) => {
-    slice.data.exp += 1;
+  updateExp: (storeRef) => {
+    storeRef.data.exp += 1;
   },
-  updateDeep: (slice) => {
+  updateDeep: (storeRef) => {
     //slice is the store data. {exp: 10, deep: ...}
-    slice.data.deep.moreDeep.evenDeep.data = "Ok we got you";
+    storeRef.data.deep.moreDeep.evenDeep.data = "Ok we got you";
   },
   // ...more actions
 });
 ```
 
-* Organised slice with data at root level
+* We define all data at root level
 
 ```js 
 export const useExpStore = createStore({
@@ -158,273 +147,19 @@ export const useExpStore = createStore({
     }
   },
   //...more data
-  updateExp: (slice) => {
-    slice.exp += 1;
+  updateExp: (storeRef) => {
+    storeRef.exp += 1;
   },
-  updateDeep: (slice) => {
+  updateDeep: (storeRef) => {
     //slice is the store data. {exp: 10, deep: ...}
-    slice.data.deep.moreDeep.evenDeep.data = "Ok we got you";
+    storeRef.data.deep.moreDeep.evenDeep.data = "Ok we got you";
   },
   // ...more actions
 });
 
 ```
 
-#### Use the store
-
-At this point, for React users, you can use it in two ways when using hook or by listening to <a href="#events">
-Events</a>.
-Let's get the store and extract the part we want.<br>
-
-Vanilla users JUMP here <a href="#events">Events</a>
-
-```js
-import { useExpStore } from "./store";
-
-const MyComponent = () => {
-
-  // we get the store and extract exp
-  const { exp } = useExpStore();
-
-  // Or
-  const { exp } = useExpStore("*");
-
-  // Or
-  const { exp } = useExpStore("_D");
-
-  return <span>{exp}</span>;
-};
-```
-
-
-With that MyComponent render if `exp` changes and if any value in `useExpStore` change. Sometimes it is what we want, so
-it is fine.
-
-* Ask `useExpStore` to extract the part you want for you. This is useful if the component will only
-  listen to specific value changes. It is usually what most of us want
-
-```js
-//My component
-
-import { useExpStore } from "./store";
-
-const MyComponent = () => {
-
-  // In case of not organized we ask the store to extract exp for us
-  const exp = useExpStore("exp");
-
-  // In case of grouped data ,we ask the store to extract exp for us like this
-  const exp = useExpStore("data.exp");
-
-  return <span>{exp}</span>;
-};
-```
-
-#### Autocomplete or IntelliSense
-
-Autocompletion or intellisense is there for you. You don't need to memorize the order of your data.
-
-<img src="assets/autocomplete.png" alt="icon" width="100%" height="auto">
-
-#### Extract actions or data
-
-You can call getActions to get your actions or access your actions through the dispatcher
-property
-
-> Note : <br/>
-> Every action is chainable. You can use it like this action().action().actions() and so on.
-> Or just call action(). It is totally up to you <br/>
-
-* Extract actions
-
-```js
-const { putOil } = useCarStore.getActions()
-
-const putOil = useCarStore.dispatcher.putOil;
-
-// And use it like this
-
-putOil() // or 
-
-putOil().takePassengers().drive() //and so on. depends on what you want
-```
-
-* Extract all data <br>
-  Sometimes we want to extract all the data without the actions, and vice versa. You can proceed as follows
-
-```js
-// extract all actions with optimal way
-// Making useExpStore PURE DISPATCHER 
-const allActions = useExpStore("_A");
-// allActions.updateExp().doSomethingElse().updateExp()
-
-
-// extract all actions with default way
-const { actions1, actions2, ...etc } = useExpStore();
-// action1().actions2().doSomethingElse().action1()
-
-// extract all data with PURE DATA CONSUMER
-const allData = useExpStore("_D")
-// console.log(allData.exp)
-
-```
-
-A good tip is to Extract all data only if the Component consumes all of it, else extract the desired part.
-
-#### Performance
-
-Even if you call your action or chain of actions 1000 times in a single click or once,
-you'll only get one rendering of your component, not 1000 renderings.<br>
-This applies to synchronous actions. Asynchronous actions render the component when they are ready.
-We cannot wait for all asynchronous actions to finish before rerender.
-
-#### Optimisation
-
-Usually in any React-based app `process.env.NODE_ENV` is already exposed. And if so, it is good for you because
-you are going to get the smallest and fastest version of this library.<br/>
-if `process.env.NODE_ENV` is not exposed, expose it your self depending on tools you are using.<br/>
-
-* Maybe webpack `--env.NODE_ENV="production"` when you are building your project
-* Maybe cross-env `cross-env NODE_ENV=production` when you are building your project
-* Or whatever tools you are using
-
-#### Security
-
-Do not mutate store like that. You will override the reference with a new object and break the store.
-Keep this in mind, slice or whatever the name you call it, is there as a reference to your real store.
-
-```js
-const useStore = createStore({
-  myValue: 10,
-  setData: (slice) => {
-    // ❌ Bad, Don't do for security and integrity reason.
-    slice = {
-      myValue: 11
-    }
-  }
-})
-```
-
-`slice` is there as reference to your store. Do not override the reference. Do like following lines
-
-```js
-const useStore = createStore({
-  myValue: 10,
-  setData: (slice) => {
-    // ✅ Good,
-    slice.MyValue = 11
-    // ✅ Good,
-    slice.MyValue = {
-      // ...whatever you want
-    }
-    // ✅ Good, you can add new Props
-    slice.newProp = {
-      // ...whatever you want
-    }
-    // ✅ Good,
-    slice.props.data = {
-      someData: someValue
-      // ...whatever you want
-    }
-    // ✅ Good,
-    slice.props.data.someData += someValue
-  }
-})
-```
-
-#### Chain actions call issue
-
-Use chain actions with caution when using promises. Without promises, there's no risk. Enjoy. But with promises,
-Make sure that when calling them, each action updates a different part
-of your store and not the same one. Or combine the logic of the actions. For example:
-
-```js
-const store = createStore({
-  value: 12,
-  updateValue: async (slice) => {
-    // setSomeData is slow api and finish in 1 second
-    const res = await setSomeData();
-    console.log(res) // <---- 20
-    // ❗ risky, we are updating value in an async operation while another action is doing the same
-    slice.value = res
-  },
-  resetValue: async (slice) => {
-    // resetSomeData is fast api and finish in 1ms
-    const res = await resetSomeData();
-    console.log(res) // <---- 0
-    // ❗ risky, we are updating value in an async operation while another action is doing the same
-    slice.value = res
-  }
-})
-```
-
-It is risky if we call both actions at the same moment. If we call one by one based on event or something else, It is
-fine.
-But here
-
-* We can convert action to synchronous, but it is not what we want.
-* We can change different part of store, `updateValue` changes `value` and `resetValue` changes another prop. But maybe
-  it's not what we want
-* We can merge both logics in one action. This is the best thing to do here
-
-Both functions `updateValue` and `resetValue` change the same data `slice.value`. This is why we want to combine
-actions.<br>
-If they don't change the same property, we can chain like we want even with async actions, no risk at all. But in our
-case, using a chain give this
-result
-
-```js
-// calling in this order
-updateValue().resetValue() // <--- output 20
-
-// Calling in this order . We reverse the order
-resetValue().updateValue() // <--- output 20
-```
-
-* The revers calling `resetValue().updateValue()` match our expectation, because we first reset and then update.
-  It is fine but still dangerous because we can't guarantee the response time of the api.
-* The default calling `updateValue().resetValue()` output `20`. because `resetValue` finish faster than `updateValue`
-  and
-  nothing was reset. In fact, none of these is safe. Below is the correct way to achieve what we want
-
-```js
-const store = createStore({
-  value: 12,
-  updateAndResetValue: async (slice) => {
-    await setSomeData();
-    const res = await resetSomeData();
-    console.log(res) // <---- 0
-    // ✅ correct, we changes the value only once.
-    slice.value = res
-  },
-})
-```
-
-> 🛑 You can change the same value in multiple actions when these actions are synchronous. <br/>
-> 🛑 It is not recommended to change the same value in multiple actions when these actions or one of them is
-> asynchronous.
-
-We group all actions in one promise and handle every change in the correct order in order to get the correct output: `0`
-
-#### Passing parameter to actions
-
-To finish with actions, you can pass whatever you want to your actions like this
-
-```js
-const store = createStore({
-  value: 12,
-  updateValue: (slice, params1, params2, ...rest) => {
-    slice.value = params1 | params2 // or one of rest
-  },
-})
-
-// Then call it like this
-updateValue(params1, params2, otherParams)
-```
-
-### Group store
-
-A group store is a group of multiple slices. To create it call the same api `createStore` like that
+### Group of stores
 
 ```js
 import { createStore } from "aio-store"
@@ -448,73 +183,21 @@ export const useGroupStore = createStore({
 
 })
 ```
-
-To use it, just do the same thing as a slice. Since it is a group, it is not advised to extract the
-whole group unless you know what you are doing. Intellisense will be there to help you. No need to memoize your
-store.<br>
-
-Vanilla users JUMP to <a href="#events">Events</a>
+> We do not enforce rules on your store architecture except for actions.
+> * First level of your store for a slice,
+> * Group-first level for a group of stores.
 
 ```js
-const MyComponent = () => {
-
-  // connecting to the group
-  const groupStore = useGroupStore();
-
-  // connecting to modal data with actions
-  const modalStore = useGroupStore("modal");
-
-  // connecting to notification data with actions
-  const notificationStore = useGroupStore("notification")
-}
-```
-
-You can also connect your component to nested data in the store like that.
-
-```js
-const modalIsOpen = useGroupStore("modal.isOpen")
-const notificationMessage = useGroupStore("notification.message")
-```
-
-Or get all modalActions making `useGroupStore` PURE DISPATCHER
-
-```js
-// all modal actions without data
-// this is a PURE DISPATCHER
-const modalActions = useGroupStore("modal._A")
-
-// specific modal action with PURE DISPATCHER
-const openModal = useGroupStore("modal.openModal")
-```
-
-Or get all data
-
-```js
-// all modal data without actions
-const modalActions = useGroupStore("modal._D")
-
-// specific modal data
-const openModal = useGroupStore("modal.isOpen")
-```
-
-> We do not enforce rules on your store architecture except for actions who must be at the first level of your store for
-> a slice, and group-first level for a grouped store.
-
-```js
-// ✅ This is good                       // ✅ This is good. Reversing order is fine
-const sliceStore = { |
+// ✅ This is good
 const sliceStore = {
-  ...myData, |
-...
-myActions,
-...
-myActions |
-...
-myData
-}                               |
+  ...myData,
+  ...myActions,
 }
--------------------------------------------------------------------------------------------
-
+// ✅ This is good. Reversing order is fine
+const sliceStore = {
+  ...myActions,
+  ...myData
+}
 // ✅ This is good.
 const myGroupStore = {
   groupOne: {
@@ -547,138 +230,165 @@ const myGroupStore = {
 export const useStore = createStore(sliceStore | myGroupStore)
 ```
 
-> If we find an action at root level, we create a slice with that action and ignore all other actions.<br>
-> If we find an action at the next level, we create a group if no actions are present in the first level and ignore all
-> other actions.<br>
-> Any very deep level actions will be ignored. You can do what you want with them, but they will dispatch nothing
-> * Group store: Actions inside the group-first level,
-> * Slice store: Actions at first level
-
-You also have access to an external dispatcher which can be used anywhere in your app. Inside a component or not,
-inside a hook or not.
-
-## External dispatcher
-
-> NOTE: It works for group or slice store.
-
+#### Promise in actions
+Just act when you are ready
 ```js
-export const useStore = createStore(...);
-
+const useStore = createStore({
+  myValue: 10,
+  setData: async (storeRef) => {
+    const value =  await callingServer();
+    storeRef.myValue = value
+  }
+})
 ```
 
-Now you can consume data and dispatch actions.
+#### Use the store
+
+At this point, for React users, you can use it in two ways when using hook or by listening to <a href="#events">Events</a>.
+
+Vanilla users can still call the store like this `myStore()` and get all their data. But for realtime update, JUMP here <a href="#events">Events</a>
+
+>[!NOTE]<br>
+> Events are available for all platforms, vanilla, React etc...
 
 ```js
+import { useExpStore } from "./store";
 
-// This is a PURE DISPATCHER
-export const GlobalDispatcher = useStore.dispatcher
+const MyComponent = () => {
 
-// Consume your store like before
-const { someData } = useStore();
+  // Realtime changes available for React users
+  const { exp } = useExpStore();
 
-// PURE DISPATCHER
-const actions = useStore("groupKey._A");
+  // ❗ this is just a snapshot, No realtime changes
+  const { exp } = useExpStore.getSnapshot();
 
-// and so on
+  // ❗ this is just a snapshot, No realtime changes
+  const exp = useExpStore.getSnapshot("exp");
+
+  // Realtime changes available for React users
+  const { exp } = useExpStore("*");
+
+  return <span>{exp}</span>;
+};
 ```
 
-Use the `useStore` in any component like before. Nothing changes. Extract what you want from the store, data, actions,
-whatever ...
+With that MyComponent render if `exp` changes and if any value in `useExpStore` change. Sometimes it is what we want, sometimes not
 
-But now you are able to dispatch action from `GlobalDispatcher` and from any file like this
+If the component only listens to specific value changes, it is better to directly connect the component to that value 
 
 ```js
-import GroupGlobalDispatcher from "where_ever_it_is";
+//My component
 
-//or
+import { useExpStore } from "./store";
 
-import SliceGlobalDispatcher from "where_ever_it_is";
+const MyComponent = () => {
 
-// from a slice store
-SliceGlobalDispatcher.someAction().action().action(); //  and so on
+  // In case of not organized we ask the store to extract exp for us
+  const exp = useExpStore("exp");
 
-// From a group: EX: modal
-GroupGlobalDispatcher.modal.action().action(); // and so on
+  // Deeper data
+  const deepValue = useExpStore("data.depp.moreDeep");
 
-// From a group: EX: yourGroupKey
-GroupGlobalDispatcher.yourGroupKey.action().action(); //  and so on
+  return <span>{exp}</span>;
+};
+```
+
+#### Use your actions
+
+You can call `getActions` to get your actions or use the dispatcher property.<br>
+You can use your actions anywhere in your app, inside a component or not.
+
+> Note : <br/>
+> Every action is chainable. You can use it like this action().action().actions() and so on.
+> Or just call action(). It is totally up to you <br/>
+
+```js
+const { putOil } = useCarStore.getActions()
+// Or
+const { putOil } = useCarStore.dispatcher
+
+// And use it like this
+
+putOil() // or 
+
+putOil().takePassengers().drive() //and so on. depends on you
+```
+
+#### Mutation
+All changes you are doing in the store in made in a draft of your store in order to keep your store immutable<br>
+
+Do not mutate store like below. Please be aware that, `storeRef` or whatever the name you call it, is there as a reference to a draft of your real store.
+By doing this, it will not work. You are destroying the reference but no worries, your real store is still safe.
+
+```js
+const useStore = createStore({
+  myValue: 10,
+  setData: (storeRef) => {
+    // ❌ Bad, Don't do this
+    storeRef = {
+      myValue: 11
+    }
+  }
+})
+```
+Instead, do like following lines
+
+```js
+const useStore = createStore({
+  myValue: 10,
+  setData: (storeRef) => {
+    // ✅ Good,
+    storeRef.MyValue = 11
+    // ✅ Good,
+    storeRef.MyValue = {
+      // ...whatever you want
+    }
+    // ✅ Good, you can add new Props
+    storeRef.newProp = {
+      // ...whatever you want
+    }
+    // ✅ Good,
+    storeRef.props.data = {
+      someData: someValue
+      // ...whatever you want
+    }
+    // ✅ Good, if props.data already exists
+    storeRef.props.data.someData += someValue
+  }
+})
 ```
 
 ## Events
 
 You can listen to certain store events that allow you to receive updates without rendering your component, or if you are
-not using React.
-Very useful when you want to update something stateless. We all hate unnecessary rendering 😀.
+not using React.<br>
+Very useful when you want to update something stateless.
 
-* Listen to `change` event. <br/>
-  **change event** is available for both. Group and slice stores. But keep this in mind. You will receive an update for
-  all changes in the store,
+* Listen to change in your store
 
 ```js
 const myStore = createStore(...);
 
-myStore.on('change', (store) => {
-  // do whatever you want,
-})
-```
-
-The store your callback received contains everything you need to consume or dispatch data.
-
-* Listen to specific change
-
-```js
-const myStore = createStore(...);
-
-myStore.listen('data.content.value', (data) => {
+// Listen to all changes
+myStore.listen('*', (data) => {
+  // while listening, you can get a snapshot to do some control
+  // React user
+  const snap = myStore.getSnapshot()
+  // No hook users
+  const snap = myStore()
+  
+  const someValue = myStore.getSnapshot("someValue")
   // do what ever you want with your data,
 })
-```
 
-When listening to a specific part of your store, you can get a snapshot of your store if needed.<br>
-
-#### Vanilla user
-
-```js
-const myStore = createStore(...);
-
-// Listen to value changes
-myStore.listen('data.content.value', (value) => {
-  // Get a snapshot
-  const snapshot = myStore();
-  console.log(snapshot.data.otherData)
-  //or
-  snapshot.action().otherActions()
+// Listen to specific changes
+myStore.listen('data.content.value', (data) => {
+  // while listening, you can get a snapshot to do some control
+  const snap = myStore.getSnapshot()
+  const someValue = myStore.getSnapshot("someValue")
+  // do what ever you want with your data,
 })
-```
 
-Get a specific part
-
-```js
- const snapshot = myStore("specific.part");
-```
-
-You can also do like React User. See below
-
-#### React user
-
-Since your store is a hook, you will get this error if you try to get a snapshot when using event listener <br>
-> [!WARNING]  
-> Hooks can only be called inside the body of a function component ...
-
-So you can use a function `getSnapshot` to get a snapShot of your store<br>
-`getDataSnapshot` for data only <br>
-`getActions` for actions only
-
-```js
-const myStore = createStore(...);
-
-// Listen to value changes
-myStore.listen('data.content.value', (value) => {
-  // Get a snapshot or actions
-  const snapshot = myStore.getSnapshot();
-  const data = myStore.getDataSnapshot();
-  const actions = myStore.getActions();
-})
 ```
 
 All event listener return an unsubscribe function
@@ -692,45 +402,17 @@ const unsubscribe = myStore.listen('data.someAction', (action) => {
 unsubscribe()
 ```
 
-And you can also listen to all Data or all actions
-
-```js
-// Listen to all Data changes
-myStore.listen('_D', (action) => {
-  // do some stuff with your data
-})
-
-// Listen to all Data changes
-myStore.listen('_A', (action) => {
-  // do what ever you want with your action,
-  // you can also dispatch
-})
-```
-
-Or if your store is a group, and you want all data or all actions from some key, 
-
-```js
-// Listen to all Data changes
-myStore.listen('groupKey._D', (action) => {
-  // do some stuff with your data
-})
-
-// Listen to all Data changes
-myStore.listen('groupKey._A', (action) => {
-  // do what ever you want with your action,
-  // you can also dispatch
-})
-```
-See create a group store <a href="#group-store">HERE</a>
-
 ## Interceptors
 
 Interceptors are firstly designed to keep sensitive data of your store safe unless you decided otherwise.<br>
-But you can also delegate some control them and keep your store clean. It is up to you
+But you can also use them for controls. It is up to you.
+>[!IMPORTANT]<br>
+> By default, all interceptors allow actions
+
 With them, you can :
 
-* Allow an action (update or deletion)
-* Reject an action (update or deletion)
+* Allow an action (update or deletion of the intercepted path)
+* Reject an action (update or deletion of the intercepted path
 * Override an action (update or deletion)
     * Override by key
     * Override by value
@@ -740,7 +422,7 @@ Please use them with caution.<br>
 They are designed to be fired on any change that would compromise their sensitive data.<br>
 Do not use them to update the UI, instead use <a href="#events">EVENTS</a> or
 <a href="#use-the-store">YOUR STORE</a>
-> [!WARNING]  
+> [!IMPORTANT]  
 > Never use interceptors to update your UI. Interceptors are safety provider and are fired on sensitive data changes
 
 ### Add an interceptor
@@ -762,7 +444,7 @@ myStore.intercept("data.value", (store) => {
 * `interception.value`: The new value
 * `interception.update`: The draft store that is updated.
 * `interception.preservePath`: Tell you if the path you intercept is preserved during the update
-  * Ex: you intercept `data.content` and suddenly `data` becomes `5`. The path is broke because `content` no longer exists.
+  * Ex: you intercept `data.content` and suddenly `data` becomes `5`. The path is broken because `content` no longer exists.
 * `interception.action`: The intercepted action:
   * `update`: When you want to update something in your store
   * `addInSet`: When you want to add something to a Set collection in your store
@@ -772,7 +454,7 @@ myStore.intercept("data.value", (store) => {
   * `deleteInMap`: When you want to delete something from a Map collection in your store
   * `clearInSet`: When you want to clear a Set collection in your store
   * `clearInMap`: When you want to clear a Map collection in your store
-* `interception.event`: The intercepted event
+* `interception.event`: The intercepted event for ex: `data.content.value` or `some.part.of.your.store`
 
 Let's take this example
 ```js
@@ -784,76 +466,114 @@ const myStore = createStore({
       moreDeep: {}
     }
   },
-  update: (store: any) => {
+  update: (storeRef: any) => {
    // ✅ Zero risk action
-    store.deep.content.moreDeep = {
+    storeRef.deep.content.moreDeep = {
       ...store.deep
     };
     // ❌ Risky action
-    store.deep = null;
+    storeRef.deep = null;
     // ✅ Zero risk action
-    store.data = "some data";
+    storeRef.data = "some data";
     // ✅ Zero risk action
-    store.deep.content.moreDeep.content.moreDeep = "my deep content"
+    storeRef.deep.content.moreDeep.content.moreDeep = "my deep content"
     // ❌ Risky action
-    delete store.deep
+    delete storeRef.deep
   },
 });
 ```
-With that all components that are connected to the sensitive data `deep.content.deep` will simply stop working because `deep` will be null and also deleted<br>.
-Since it is a sensitive data, we can always assure that `deep.content.moreDeep` will be available.<br>
-Lets add an interceptor
+With that all components that are connected to the sensitive data `deep.content.moreDeep` will simply stop working because `deep` will be null and also deleted later<br>.
+Since it is sensitive data, we can always assure that `deep.content.moreDeep` will be available.<br>
+Let's add an interceptor there
 
 ```js
 myStore.intercept("deep.content.moreDeep", ({interception,allowAction,rejectAction}) => {
-  if (interception.preservePath) allowAction();
-  else rejectAction();
+  if (!interception.preservePath) rejectAction();
 })
 ```
-`interception.preservePath` tell you if `deep.content.moreDeep` will be available after update.
+`interception.preservePath` tell you if `deep.content.moreDeep` will be available after the update.
 > [!NOTE]  
-> When you reject an action, it will not interrupt other actions
+> When you reject an action, it will not interrupt other actions, because we suppose that not all of them are unsafe.<br>
 
-In the example above all `❌ Risky action` are rejected but all others actions happened without any issue.
+In the example above all `❌ Risky action` are rejected, but all other actions happened without any issue.
 
 > [!IMPORTANT]  
-> Interceptor does not guarantee the type of value that will be set, you need to guaranty that yourself.
-> It will make the sensitive data always available. But the content of the sensitive data is up to you
+> Interceptor does not guarantee the type of value that will be set. You need to guaranty that yourself.<br>
+> It will assure that the sensitive data will always be available. But the content of the sensitive data is up to you
+
+Examples of more strict control. Even if interceptors are not designed for that
 
 ```js
-myStore.intercept("deep.content.moreDeep", ({interception: {value},allowAction,rejectAction}) => {
-  if (interception.preservePath) allowAction();
-  else rejectAction();
+myStore.intercept("some.part.your.store", ({interception,allowAction,rejectAction}) => {
+  
+  const {preservePath, update, action,key,value} = interception;
+
+  // The Map must not be empty
+  if (action === "clearInMap") rejectAction()
+  
+  // The path must always be available
+  if (!preservePath)  rejectAction();
+  
+  // Must always be an object
+  if (typeof update[key] !== "object")  rejectAction();
+  
+  // Must always be an object with one key
+  if (Object.keys(update[key]).length > 1)  rejectAction();
+
+  // Must always be an object with one key => test
+  if (key !== "test")  rejectAction();
+  
+  // and so on
+  
 })
 ```
-
-With that, let's do some control.
-
-### Reject an action
-
-We want to reject any clear method from our Map collection inside our store
+>[!NOTE]<br>
+> Doing nothing in the interceptor allows the action
 
 ```js
+// ❗ This will allow the action.
 myStore.intercept("data.map", (store) => {
-  if (store.interception.action !== "clearInMap") {
-    store.allowAction();
-  } else {
-    store.rejectAction()
-  }
+  // You do nothing
 })
+
 ```
 
-### Allow an action with condition
-
+### Promise, Async & await in interceptors
+Just act when you are ready. If you are not using await, do not omit the return keyword because we are also trying to resolve your callback.
 ```js
-myStore.intercept("data.value", (store) => {
-  if (store.interception.value < someMaxValue) {
-    // We allow the action
-    store.allowAction()
-  }
-  // This part is optional but you can add it
-  else store.rejectAction()
+myStore.intercept("data.map", async (store) => {
+  const ok = await serverCheck(store.interception.value);
+  !ok && store.rejectAction()
 })
+
+myStore.intercept("data.map", async (store) => {
+  // ✅ add return
+  return serverCheck(store.interception.value).then(ok => {
+    !ok && store.rejectAction()
+  });
+})
+
+myStore.intercept("data.map", async (store) => {
+  // ❌ you omit return
+  serverCheck(store.interception.value).then(ok => {
+    // ❌ to late
+    !ok && store.rejectAction()
+  });
+})
+
+myStore.intercept("data.map", (store) => {
+  // ✅ add return
+  return new Promise(resolve => {
+    // doing some stuff
+    /// Resolve your decision
+    resolve(store.rejectAction)
+    
+    // Or 
+    store.rejectAction()
+    resolve()
+  })
+})
+
 ```
 
 ### Override an action by key
@@ -890,11 +610,15 @@ myStore.intercept("data.value", (store) => {
   }
 })
 ```
-
 That's it.
-> [!WARNING]<br>
-> You can only place one interceptor per value,<br>
+### Interceptor restrictions
+You can only place one interceptor per line in your value.<br>
+This is an example of a line in your store:
 
+`data.content.value` is a line
+`data.something.value` is a line
+
+#### Duplicate interceptors
 ```js
 // First interceptor
 myStore.intercept("data.value", (store) => {
@@ -905,30 +629,13 @@ myStore.intercept("data.value", (store) => {
 
 })
 ```
-
 The second override the first one.
-
-> [!IMPORTANT]<br>
-> If you add an interceptor, don't forget to allow, reject or cancel the action.
-> Otherwise, it will look like a reject while waiting for your action.
-
-For example
-
-```js
-myStore.intercept("data.value", (store) => {
-  // You intercept and you do nothing,
-  // This is like as a reject, still waiting for an action from you
-})
-```
-
-It Is similar to a rejection while waiting for an action from you.
 
 > [!NOTE]<br>
 > If you intercept `data.content.value`, then you also intercept change on `data` and `data.content`<br>
 
 For example: `data` was `{content: {value: 10}}`, and for some reason `data` becomes a `5`.<br>
 We will immediately call your interceptor.<br>
-Original line is broken because `content.value` disappears.
 
 The job of that interceptor is to keep the value inside `data.content.value` safe.<br>
 But if `data` changes, you need to know if that change will impact your value or not.
@@ -936,7 +643,7 @@ But if `data` changes, you need to know if that change will impact your value or
 You will never intercept change on `data.someThing` or `data.content.something`.
 `data.content.something` changes will never impact `data.content.value`.
 
-### Multiple interceptors
+#### Multiple interceptors
 
 You can add many interceptors as you want with once condition. Only one interceptor per value.
 

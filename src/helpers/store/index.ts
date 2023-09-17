@@ -1,6 +1,6 @@
 import { assignObservableAndProxy, removeObservableAndProxy } from "../util";
 import { StoreController } from "./controller";
-import { StoreType } from "../../types";
+import type { StoreType } from "../../types";
 import { GROUP } from "../../constants/internal";
 
 class Store {
@@ -40,12 +40,17 @@ class Store {
   updateStore() {
     this.#syncStore();
   }
+
   getDraft(callback: any) {
     this.#getProxyStore(callback);
   }
 
   #getProxyStore(callback: any) {
-    callback(this._proxyStore);
+    /* todo try fixing problem with deletion
+     * use todo test.txt
+     * */
+
+    callback(removeObservableAndProxy(this._proxyStore));
   }
 
   #syncStore() {
@@ -79,6 +84,7 @@ class Store {
       this.initPrivate(userStore);
     }
   }
+
   #groupInit(userStore: any) {
     for (const userStoreKey in userStore) {
       // we get a slice ex: we get test from {test: any, other: any}
@@ -116,7 +122,6 @@ class Store {
         }
       }
     }
-    // this._storeController.createStoreEvent(this._store, "");
   }
 
   initPrivate(params: any) {
@@ -125,8 +130,8 @@ class Store {
 
   #sliceInit(params: any) {
     /*
-     * Because, data didn't follow a passing rules. We need
-     * to separate actions from data first
+     * We do not want to create proxy with functions.
+     * So we separate actions from data first
      * */
     const { store, actions } = this.#separateActionsAndData(params);
     this._store = store;

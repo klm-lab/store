@@ -7,7 +7,7 @@ function validateStore(store: any, errorMessage?: string) {
   if (typeof store === "undefined" || store === null) {
     _utilError &&
       _utilError({
-        name: `Creating store`,
+        name: `Init store`,
         message:
           errorMessage ?? ((ERROR_TEXT && ERROR_TEXT.STORE_EMPTY) as string),
         state: store
@@ -16,7 +16,7 @@ function validateStore(store: any, errorMessage?: string) {
   if (store.constructor.name !== "Object") {
     _utilError &&
       _utilError({
-        name: `Creating store`,
+        name: `Init store`,
         message:
           errorMessage ??
           ((ERROR_TEXT && ERROR_TEXT.STORE_NOT_OBJECT) as string),

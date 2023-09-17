@@ -47,6 +47,7 @@ export function pathIsPreserved(event: string, getStore: any) {
   let preservePath = true;
   let result: any = {};
   getStore((store: any) => {
+    console.warn("preserving check with", store, event);
     result = { ...store };
     for (let i = 0; i < paths.length; i++) {
       try {

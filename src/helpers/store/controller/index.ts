@@ -130,41 +130,44 @@ class StoreController {
   ) {
     const { listener, path } = interceptor;
     const { preservePath, update } = pathIsPreserved(path, this.#getDraft);
-    listener({
-      interception: {
-        value: options.value,
-        update,
-        key: options.key,
-        action: options.action,
-        event: options.event,
-        preservePath
-      },
-      allowAction: () => {
-        options.interceptorAction = "allowAction";
-        this.#dispatchControlledAction(options);
-      },
-      override: {
-        value: (value?: any) => {
-          options.value = value ?? options.value;
-          options.interceptorAction = "override.value";
-          this.#dispatchControlledAction(options);
+    Promise.resolve(
+      listener({
+        interception: {
+          value: options.value,
+          update,
+          key: options.key,
+          action: options.action,
+          event: options.event,
+          preservePath
         },
-        key: (key?: any) => {
-          options.key = key ?? options.key;
-          options.interceptorAction = "override.key";
-          this.#dispatchControlledAction(options);
+        allowAction: () => {
+          options.interceptorAction = "allowAction";
         },
-        keyAndValue: (key?: any, value?: any) => {
-          options.key = key ?? options.key;
-          options.value = value ?? options.value;
-          options.interceptorAction = "override.keyAndValue";
-          this.#dispatchControlledAction(options);
+        override: {
+          value: (value?: any) => {
+            options.value = value ?? options.value;
+            options.interceptorAction = "override.value";
+          },
+          key: (key?: any) => {
+            options.key = key ?? options.key;
+            options.interceptorAction = "override.key";
+          },
+          keyAndValue: (key?: any, value?: any) => {
+            options.key = key ?? options.key;
+            options.value = value ?? options.value;
+            options.interceptorAction = "override.keyAndValue";
+          }
+        },
+        rejectAction: () => {
+          options.interceptorAction = "rejectAction";
         }
-      },
-      rejectAction: () => {
-        options.interceptorAction = "rejectAction";
-        this.#dispatchControlledAction(options);
+      })
+    ).then((action: any) => {
+      console.log("resolved", options.interceptorAction);
+      if (typeof action === "function") {
+        action();
       }
+      this.#dispatchControlledAction(options);
     });
   }
 }

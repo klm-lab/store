@@ -1,0 +1,23 @@
+const myStore = createStore({
+    gh: {
+        data: 8,
+        data6: {
+            fg: true
+        },
+        content: {}
+    },
+    noLockedEvent: async (store: any) => {
+       delete store.gh.content;
+        delete store.gh.data
+    },
+});
+
+ myStore.intercept("gh.data", async ({interception, allowAction, rejectAction}) => {
+            console.log(interception)
+            if (!interception.preservePath) {
+                console.log("reject");
+                rejectAction()
+            }
+})
+
+myStore.dispatcher.noLockedEvent();
