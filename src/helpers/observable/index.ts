@@ -1,7 +1,7 @@
-import { assignObservableAndProxy, isSame } from "../util";
+import { createProxy, isSame } from "../util";
 import type { DispatchType } from "../../types";
 
-class ObservableMap extends Map {
+class SpyMap extends Map {
   readonly #event: string;
   #init: boolean;
   readonly #dispatch: DispatchType;
@@ -13,26 +13,17 @@ class ObservableMap extends Map {
     this.#dispatch = dispatch;
   }
 
-  finishInit() {
+  end() {
     this.#init = false;
   }
 
   set(key: any, value: any) {
-    // No dispatch on init
-    if (this.#init) {
-      super.set(
-        key,
-        assignObservableAndProxy(value, `${this.#event}`, this.#dispatch, true)
-      );
-      return this;
-    }
-
     if (!isSame(super.get(key), value)) {
       super.set(
         key,
-        assignObservableAndProxy(value, `${this.#event}`, this.#dispatch, true)
+        createProxy(value, `${this.#event}`, this.#dispatch, true)
       );
-      this.#dispatch(this.#event);
+      !this.#init && this.#dispatch(this.#event);
     }
     return this;
   }
@@ -49,7 +40,7 @@ class ObservableMap extends Map {
   }
 }
 
-class ObservableSet extends Set {
+class SpySet extends Set {
   readonly #event: string;
   #init: boolean;
   readonly #dispatch: DispatchType;
@@ -61,24 +52,14 @@ class ObservableSet extends Set {
     this.#dispatch = dispatch;
   }
 
-  finishInit() {
+  end() {
     this.#init = false;
   }
 
   add(value: any) {
-    // No dispatch on init
-    if (this.#init) {
-      super.add(
-        assignObservableAndProxy(value, this.#event, this.#dispatch, true)
-      );
-      return this;
-    }
-
     if (!super.has(value)) {
-      super.add(
-        assignObservableAndProxy(value, this.#event, this.#dispatch, true)
-      );
-      this.#dispatch(this.#event);
+      super.add(createProxy(value, this.#event, this.#dispatch, true));
+      !this.#init && this.#dispatch(this.#event);
     }
     return this;
   }
@@ -95,4 +76,4 @@ class ObservableSet extends Set {
   }
 }
 
-export { ObservableMap, ObservableSet };
+export { SpyMap, SpySet };

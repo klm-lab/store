@@ -1,5 +1,5 @@
 import type { Store } from "./types";
-import { finalizeStore, getData } from "./helpers/util";
+import { finalize, getData } from "./helpers/util";
 import { InternalStore } from "./helpers/store";
 
 const createStore = <S>(store: S): Store<S> => {
@@ -7,7 +7,7 @@ const createStore = <S>(store: S): Store<S> => {
   const useVanillaStore = (target?: string) => {
     return getData(newStore, target);
   };
-  return finalizeStore(useVanillaStore, newStore);
+  return finalize(useVanillaStore, newStore);
 };
 
 export { createStore };

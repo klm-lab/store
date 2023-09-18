@@ -1,6 +1,6 @@
 import { useCallback, useSyncExternalStore } from "react";
 import type { Store } from "../types";
-import { finalizeStore, getData } from "../helpers/util";
+import { finalize, getData } from "../helpers/util";
 import { InternalStore } from "../helpers/store";
 
 const createStore = <S>(store: S): Store<S> => {
@@ -10,7 +10,7 @@ const createStore = <S>(store: S): Store<S> => {
     return useStore(newStore, target);
   };
 
-  return finalizeStore(useSyncStore, newStore);
+  return finalize(useSyncStore, newStore);
 };
 
 const useStore = (internalStore: InternalStore, target?: string) => {

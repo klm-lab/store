@@ -52,7 +52,6 @@ type FunctionType = (...args: unknown[]) => unknown;
 type DispatchType = (event: string) => void;
 
 type Store<S> = {
-  getActions: () => StoreActions<S>;
   getSnapshot: <Target extends StoreDataKey<S>>(
     target?: Target
   ) => StoreDataByTarget<S, Target>;
