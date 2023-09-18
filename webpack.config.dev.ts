@@ -1,12 +1,9 @@
 /* eslint-disable */
 // @ts-ignore
-import { vanillaConfig } from "./webpack.config";
+import { config } from "./webpack.config";
 
 module.exports = {
-  ...vanillaConfig,
+  ...config,
   mode: "development",
-  devtool: false,
-  output: {
-    ...vanillaConfig.output
-  }
+  devtool: false
 };

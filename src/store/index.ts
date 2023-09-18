@@ -1,5 +1,5 @@
 import { createProxy, removeProxy } from "../util";
-import type { SubscribeType } from "../../types";
+import type { SubscribeType } from "../types";
 
 class InternalStore {
   private _store: any;

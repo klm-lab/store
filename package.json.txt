@@ -1,0 +1,17 @@
+  // Dev
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+
+  // Prod
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./react": {
+      "types": "./react/index.d.ts",
+      "import": "./react/index.js",
+      "default": "./react/index.js"
+    }
+  },

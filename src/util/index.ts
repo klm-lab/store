@@ -1,11 +1,11 @@
 import type { InternalStore } from "../store";
-import { SpySet, SpyMap } from "../observable";
-import type { DispatchType } from "../../types";
+import { SpySet, SpyMap } from "../spy";
+import type { DispatchType } from "../types";
 
 const proxyTrap = (event: any, dispatch: DispatchType) => {
   return {
     set: (state: any, key: any, value: any) => {
-      if (!isSame(state[key], value)) {
+      if (state[key] !== value) {
         /* The correctEvent is find like this.
          * If event[key] exists, that means,
          * For ex: {data: {value: 10}} has a change in 'value', event will be {value: "data.value.data"}
@@ -113,59 +113,6 @@ export function removeProxy(data: any): any {
   }
   return data;
 }
-
-export function isSame(value1: any, value2: any): boolean {
-  let same = true;
-  if (!value1 || !value2) {
-    return Object.is(value1, value2);
-  }
-  if (
-    value1 instanceof Array &&
-    value2 instanceof Array &&
-    value1.length === value2.length
-  ) {
-    for (let i = 0; i < value1.length; i++) {
-      same = same && isSame(value1[i], value2[i]);
-      if (!same) {
-        break;
-      }
-    }
-    return same;
-  }
-  if (
-    ((value1 instanceof Set && value2 instanceof Set) ||
-      (value1 instanceof Map && value2 instanceof Map)) &&
-    value1.size === value2.size
-  ) {
-    const values1Iterator = value1.values();
-    const values2Iterator = value2.values();
-    for (let i = 0; i < value1.size; i++) {
-      same =
-        same &&
-        isSame(values1Iterator.next().value, values2Iterator.next().value);
-      if (!same) {
-        break;
-      }
-    }
-    return same;
-  }
-  if (
-    value1 instanceof Object &&
-    value2 instanceof Object &&
-    Object.keys(value1).length === Object.keys(value2).length
-  ) {
-    const values1Entries = Object.entries(value1);
-    for (let i = 0; i < values1Entries.length; i++) {
-      same = same && isSame(values1Entries[i], Object.entries(value2)[i]);
-      if (!same) {
-        break;
-      }
-    }
-    return same;
-  }
-  return Object.is(value1, value2);
-}
-
 export const finalize = (userStore: any, internalStore: InternalStore) => {
   userStore.dispatcher = internalStore.storeActions;
   // attaching snapshot
@@ -175,7 +122,7 @@ export const finalize = (userStore: any, internalStore: InternalStore) => {
     let cache = getData(internalStore, event);
     return internalStore.subscribe(event, () => {
       const data = getData(internalStore, event);
-      if (!isSame(cache, data)) {
+      if (cache !== data) {
         cache = data;
         callback(cache);
       }

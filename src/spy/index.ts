@@ -1,5 +1,5 @@
-import { createProxy, isSame } from "../util";
-import type { DispatchType } from "../../types";
+import { createProxy } from "../util";
+import type { DispatchType } from "../types";
 
 class SpyMap extends Map {
   readonly #event: string;
@@ -18,7 +18,7 @@ class SpyMap extends Map {
   }
 
   set(key: any, value: any) {
-    if (!isSame(super.get(key), value)) {
+    if (super.get(key) !== value) {
       super.set(
         key,
         createProxy(value, `${this.#event}`, this.#dispatch, true)

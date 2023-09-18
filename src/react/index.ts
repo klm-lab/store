@@ -1,7 +1,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 import type { Store } from "../types";
-import { finalize, getData } from "../helpers/util";
-import { InternalStore } from "../helpers/store";
+import { finalize, getData } from "../util";
+import { InternalStore } from "../store";
 
 const createStore = <S>(store: S): Store<S> => {
   const newStore = new InternalStore().init(store);

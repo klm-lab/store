@@ -15,21 +15,14 @@
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "scripts": {
-    "build": "npm ci && npm run build:noci",
-    "dev:noci": "npm run lint:prettier && npm run build:webpack && npm run build:dts",
-    "build:noci": "npm run clean && npm run lint:prettier && npm run build:webpack && npm run build:dts",
+    "build": "npm ci && npm run build:preview",
+    "build:preview": "npm run clean && npm run lint:prettier && npm run build:webpack && npm run build:dts",
     "lint:prettier": "npm run lint && npm run prettier",
     "build:dts": "dts-bundle-generator --config ./dts.json && npm run clean:temp",
-    "build:webpack:dev": "webpack --config webpack.config.dev.ts",
-    "build:webpack:dev:react": "webpack --config webpack.react.config.dev.ts",
-    "build:webpack:dev-w": "webpack --config webpack.config.dev.ts -w",
-    "build:webpack:dev:react-w": "webpack --config webpack.react.config.dev.ts -w",
-    "build:webpack:prod": "webpack --config webpack.config.prod.ts",
-    "build:webpack:prod:react": "webpack --config webpack.react.config.prod.ts",
-    "build:webpack:prod-w": "webpack --config webpack.config.prod.ts -w",
-    "build:webpack:prod:react-w": "webpack --config webpack.react.config.prod.ts -w",
-    "build:webpack": "npm run build:webpack:dev && npm run build:webpack:prod && npm run build:webpack:dev:react && npm run build:webpack:prod:react",
-    "start": "npm run clean && npm run lint && concurrently npm:build:webpack:dev-w npm:build:webpack:prod-w npm:build:webpack:dev:react-w npm:build:webpack:prod:react-w npm:build:dts",
+    "build:webpack": "webpack --config webpack.config.dev.ts && webpack --config webpack.config.prod.ts",
+    "build:webpack:dev": "webpack --config webpack.config.dev.ts -w",
+    "build:webpack:prod": "webpack --config webpack.config.prod.ts -w",
+    "start": "npm run clean && npm run lint && concurrently npm:build:webpack:dev npm:build:webpack:prod npm:build:dts",
     "prettier": "prettier ./src --write",
     "lint": "eslint ./src --ext .ts",
     "bpv": "npm version preminor --no-git-tag-version",
@@ -41,7 +34,6 @@
     "clean:lib:unix": "npm run clean:check:unix || rm -rf lib",
     "clean:temp:win": "npm run clean:check:win || , if exist temp rmdir /Q /S temp",
     "clean:temp:unix": "npm run clean:check:unix || rm -rf temp",
-    "size": "size-limit",
     "npm:pack": "npm pack",
     "test": "vitest",
     "test-coverage": "vitest run --coverage"
@@ -58,8 +50,6 @@
   },
   "homepage": "https://github.com/klm-lab/store#readme",
   "devDependencies": {
-    "@size-limit/preset-small-lib": "^8.2.6",
-    "@types/node": "^20.5.6",
     "@types/react": "^18.2.20",
     "@types/webpack-bundle-analyzer": "^4.6.0",
     "@typescript-eslint/eslint-plugin": "^6.3.0",
@@ -70,9 +60,7 @@
     "dts-bundle-generator": "^8.0.1",
     "eslint": "^8.47.0",
     "eslint-config-prettier": "^9.0.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
     "prettier": "3.0.1",
-    "size-limit": "^8.2.6",
     "ts-loader": "^9.4.4",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2",
@@ -83,14 +71,5 @@
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
-  },
-  "size-limit": [
-    {
-      "path": "lib/store.js",
-      "limit": "10 kB",
-      "ignore": [
-        "react"
-      ]
-    }
-  ]
+  }
 }

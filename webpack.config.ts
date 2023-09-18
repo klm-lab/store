@@ -1,9 +1,17 @@
 import path from "path";
 
-const vanillaConfig = {
+const config = {
   entry: {
-    store: path.resolve(__dirname, "src/index.ts")
+    store: {
+      import: "./src/index.ts",
+      filename: "store.js"
+    },
+    react: {
+      import: "./src/react/index.ts",
+      filename: "react/store.js"
+    }
   },
+  externals: ["react"],
   cache: false,
   module: {
     rules: [
@@ -16,9 +24,9 @@ const vanillaConfig = {
   },
   resolve: { extensions: [".ts"] },
   output: {
-    filename: "[name].js",
-    path: path.resolve(__dirname, "lib"),
-    libraryTarget: "commonjs"
+    libraryTarget: "commonjs",
+    path: path.resolve(__dirname, "lib")
   }
 };
-export { vanillaConfig };
+
+export { config };

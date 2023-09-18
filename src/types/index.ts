@@ -60,12 +60,11 @@ type Store<S> = {
     event: Target,
     callback: (data: StoreDataByTarget<S, Target>) => void
   ) => () => void;
-  <Target extends StoreDataKey<S>>(
-    target?: Target
+  <Target>(
+    target?: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>
     // check if target is passed, NonNullable help us by excluding null and undefined
   ): Target extends NonNullable<string>
-    ? // Target is present
-      StoreDataByTarget<S, Target>
+    ? StoreDataByTarget<S, Target>
     : // Target is not present.
       StoreData<S>;
 };
