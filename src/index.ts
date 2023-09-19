@@ -1,21 +1,13 @@
-import type { Store } from "./types";
-import {
-  getNewStore,
-  getData,
-  getEventAndPath,
-  finalizeStore
-} from "./helpers/tools";
-import { _checkStoreTarget } from "./helpers/notAllProd";
+import type { StoreType } from "./types";
+import { finalize } from "./util";
+import { Store } from "./store";
 
-function createStore<S>(store: S): Store<S> {
-  const newStore = getNewStore(store);
-  function useVanillaStore(target?: string) {
-    _checkStoreTarget(target);
-    const { paths } = getEventAndPath(newStore, target);
-    return getData({ paths, target }, newStore);
-  }
-  useVanillaStore.dispatcher = newStore.store.actions;
-  return finalizeStore(useVanillaStore, newStore);
-}
+const createStore = <S>(store: S): StoreType<S> => {
+  const internalStore = new Store().init(store);
+  const useVanillaStore = (target?: string) => {
+    return internalStore.getData(target);
+  };
+  return finalize(useVanillaStore, internalStore);
+};
 
 export { createStore };

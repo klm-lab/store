@@ -24,11 +24,11 @@ module.exports = {
     ecmaVersion: "latest",
     sourceType: "module"
   },
-  plugins: ["@typescript-eslint", "react-hooks"],
+  plugins: ["@typescript-eslint"],
   rules: {
-    "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/ban-types": "off", // add this because of Function
-    "react-hooks/rules-of-hooks": "error" // Checks rules of Hooks
-    // "react-hooks/exhaustive-deps": "warn" // Checks effect dependencies
+    "@typescript-eslint/no-explicit-any": "off"
+    //"@typescript-eslint/ban-types": "off", // add this because of Function
+    //"react-hooks/rules-of-hooks": "error" // Checks rules of Hooks
+    //"react-hooks/exhaustive-deps": "warn" // Checks effect dependencies
   }
 };

@@ -1,20 +1,26 @@
-const config = require("./webpack.config");
-const CopyWebpackPlugin = require("copy-webpack-plugin");
-const path = require("path");
+/* eslint-disable */
+// @ts-ignore
+import { config } from "./webpack.config";
+import CopyWebpackPlugin from "copy-webpack-plugin";
+import path from "path";
+// import { BundleAnalyzerPlugin } from "webpack-bundle-analyzer";
+
+config.entry.store.filename = "store.min.js";
+config.entry.react.filename = "react/store.min.js";
 
 module.exports = {
   ...config,
   mode: "production",
-  output: {
-    ...config.output,
-    filename: "[name].min.js"
-  },
   plugins: [
     new CopyWebpackPlugin({
       patterns: [
         {
           from: path.resolve(__dirname, "npm/index.js"),
           to: path.resolve(__dirname, "lib/index.js")
+        },
+        {
+          from: path.resolve(__dirname, "npm/index.js"),
+          to: path.resolve(__dirname, "lib/react/index.js")
         },
         {
           from: path.resolve(__dirname, "package.json"),
@@ -26,5 +32,6 @@ module.exports = {
         }
       ]
     })
+    // new BundleAnalyzerPlugin()
   ]
 };
