@@ -1,6 +1,6 @@
-import type { InternalStore } from "../store";
+import type { Store } from "../store";
 import { SpySet, SpyMap } from "../spy";
-import type { DispatchType } from "../types";
+import type { DispatchType, FunctionType } from "../types";
 
 const proxyTrap = (event: any, dispatch: DispatchType) => {
   return {
@@ -113,29 +113,20 @@ export function removeProxy(data: any): any {
   }
   return data;
 }
-export const finalize = (userStore: any, internalStore: InternalStore) => {
-  userStore.dispatcher = internalStore.storeActions;
+export const finalize = (output: any, store: Store) => {
+  output.actions = store.actions;
   // attaching snapshot
-  userStore.getSnapshot = (target?: string) => getData(internalStore, target);
+  output.getSnapshot = store.getData;
   // attaching listener
-  userStore.listen = (event: string, callback: any) => {
-    let cache = getData(internalStore, event);
-    return internalStore.subscribe(event, () => {
-      const data = getData(internalStore, event);
+  output.listen = (event: string, callback: FunctionType) => {
+    let cache = store.getData(event);
+    return store.subscribe(event, () => {
+      const data = store.getData(event);
       if (cache !== data) {
         cache = data;
         callback(cache);
       }
     });
   };
-  return userStore;
+  return output;
 };
-
-export function getData(internalStore: InternalStore, target?: string) {
-  const paths = target ? (target === "*" ? [] : target.split(".")) : [];
-  let result = internalStore.store;
-  paths.forEach((p) => {
-    result = result ? result[p] : result;
-  });
-  return result;
-}

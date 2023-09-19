@@ -26,7 +26,7 @@ Typescript user or Javascript user, it doesn't matter. It is all for you.<br/>
 
 ## Usage
 
-##### First import createStore
+Let's import `createStore`
 
 ```js
 // All users, No hook
@@ -38,11 +38,9 @@ import { createStore } from "aio-store/react";
 
 ### Create a store
 
-This library makes the creation really simple. When you create a store, in your actions, the first parameter
+This library makes the creation of a store really simple. When you create a store, in your actions, the first parameter
 will always be the store reference, his name is yours. If you want to pass other parameters, add them after the first
 parameter.
-
-#### Mixed store
 
 ```js
 export const useExpStore = createStore({
@@ -55,7 +53,7 @@ export const useExpStore = createStore({
 
 ```
 
-#### Promise
+### Actions with Promises
 Just act when you are ready
 ```js
 const useStore = createStore({
@@ -67,7 +65,7 @@ const useStore = createStore({
 })
 ```
 
-#### Use the store
+### Use the store
 * **Anywhere in your app**
 
 ```js
@@ -98,11 +96,10 @@ const MyComponent = () => {
   return <span>{exp}</span>;
 };
 ```
-* **With event**
+* **With listener**
 
-You can listen to certain store events anywhere in your app.<br>
-Events that allow you to receive changes and update something stateless.<br>
-Very useful when you want to eliminate uncessary rendering.
+You can listen to your store changes anywhere in your app and update something stateless.<br>
+Very useful when you want to eliminate unnecessary rendering.
 
 ```js
 const myStore = createStore(...);
@@ -131,26 +128,24 @@ myStore.listen('data.content.value', (data) => {
 All event listener return an unsubscribe function
 
 ```js
-const unsubscribe = myStore.listen('data.someAction', (action) => {
-  // do what ever you want with your action,
-  // you can also dispatch
-})
+const unsubscribe = myStore.listen('data', (data) => {})
 
 unsubscribe()
 ```
 
-#### Use your actions
+### Use your actions
 
-You can get your actions through the dispatcher property and use them anywhere in your app, inside a component or not.
+You can get your actions through the `actions` property and use them anywhere in your app, inside a component or not.
 
 > Note : <br/>
 > Every action is chainable. You can use it like this action().action().actions() and so on.
 > Or just call action(). It is totally up to you <br/>
 
 ```js
-const { putOil } = useCarStore.getActions()
 // Or
-const { putOil } = useCarStore.dispatcher
+const { putOil } = useCarStore.actions
+
+const putOil  = useCarStore.actions.putOil
 
 // And use it like this
 
@@ -159,7 +154,7 @@ putOil() // or
 putOil().takePassengers().drive() //and so on. depends on you
 ```
 
-#### Mutation
+### Mutation
 All changes you are doing in the store in made in a draft of your store in order to keep your store immutable<br>
 
 Do not mutate store like below. Please be aware that, `storeRef` or whatever the name you call it, is there as a reference to a draft of your real store.
@@ -206,9 +201,9 @@ const useStore = createStore({
 ## Available tools and options
 
 * `createStore` Let you create a store
-* `dispatcher` A property attached to your store that lets you dispatch actions from any file.
+* `actions` A property attached to your store that lets you dispatch actions from any file.
 * `getSnapshot` A Function attached to your store that lets you get a snapshot of your store at any time.
-* `listen` A Function attached to your store that lets you listen to changes in a specific part of your store.
+* `listen` A Function attached to your store that lets you listen to changes in all or specific part of your store.
 * `*` A key that can be passed to your store in order to get everything in that store. It is similar to passing
   nothing.
 
@@ -216,4 +211,4 @@ const useStore = createStore({
 
 ## License
 
-Distributed under the [MIT](https://choosealicense.com/licenses/mit/) License. See `LICENSE.txt` for more information.
+[MIT](https://choosealicense.com/licenses/mit/)

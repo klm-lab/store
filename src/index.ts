@@ -1,13 +1,13 @@
-import type { Store } from "./types";
-import { finalize, getData } from "./util";
-import { InternalStore } from "./store";
+import type { StoreType } from "./types";
+import { finalize } from "./util";
+import { Store } from "./store";
 
-const createStore = <S>(store: S): Store<S> => {
-  const newStore = new InternalStore().init(store);
+const createStore = <S>(store: S): StoreType<S> => {
+  const internalStore = new Store().init(store);
   const useVanillaStore = (target?: string) => {
-    return getData(newStore, target);
+    return internalStore.getData(target);
   };
-  return finalize(useVanillaStore, newStore);
+  return finalize(useVanillaStore, internalStore);
 };
 
 export { createStore };

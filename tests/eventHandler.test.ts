@@ -3,37 +3,15 @@
 import { createStore } from "../src";
 import { test, expect, vi } from "vitest";
 
-test("Invalid listener", () => {
-  const myStore = createStore({});
-  const myStore2 = createStore({ data: {} });
-
-  expect(() => myStore.listen("fgfg", undefined)).toThrowError(
-    `fgfg is undefined in the store.`
-  );
-  expect(() => myStore.listen(56, undefined)).toThrowError(
-    "Provide a valid event"
-  );
-
-  expect(() => myStore2.listen("data", undefined)).toThrowError(
-    "Provide a valid callback, a function to be able to listen."
-  );
-
-  expect(() => myStore2.listen("fgfg", undefined)).toThrowError(
-    `fgfg is undefined in the store.`
-  );
-});
-
 test("Valid listener", () => {
   const myStore = createStore({
-    data: {
-      f: {
-        data: new Map().set("d", new Set()),
-        value: false
-      },
-      add: (store) => {
-        store.f.value = true;
-        store.f.data.set("new", true).set("d", new Set().add(45));
-      }
+    f: {
+      data: new Map().set("d", new Set()),
+      value: false
+    },
+    add: (store) => {
+      store.f.value = true;
+      store.f.data.set("new", true).set("d", new Set().add(45));
     }
   });
 
@@ -52,10 +30,10 @@ test("Valid listener", () => {
   const listenCallback = vi.fn((store) => {
     expect(store.value).toBe(true);
   });
-  const unsubDatF = myStore.listen("data.f", listenCallback);
+  const unsubDatF = myStore.listen("f", listenCallback);
   const spyUn = vi.fn(unsubDatF);
   // dispatch
-  myStore.dispatcher.data.add();
+  myStore.actions.add();
   // unsubscribe
   spyUn();
   expect(spyUn).toHaveBeenCalled();
@@ -93,5 +71,5 @@ test("Test update on listener", () => {
   const unsSpy = vi.fn(uns);
   unsSpy();
   expect(unsSpy).toBeCalled();
-  myStore.dispatcher.func(1);
+  myStore.actions.func(1);
 });

@@ -28,11 +28,11 @@ test("Test use store with locked event", () => {
   const value = myStore("value");
 
   // Testing newProp
-  emptyStore.dispatcher.add();
+  emptyStore.actions.add();
   expect(emptyStore("newProp").get("lock")).toMatchObject({ data: false });
-  emptyStore.dispatcher.update();
+  emptyStore.actions.update();
   expect(emptyStore("newProp").get("lock").data).toBe(true);
-  myStore.dispatcher.noLockedEvent();
+  myStore.actions.noLockedEvent();
   expect(myStore()).toHaveProperty("gh");
 });
 test("Test use store", () => {
@@ -56,46 +56,25 @@ test("Test use store", () => {
     clearInSet: (store) => store.dataSet.clear(),
     clearInMap: (store) => store.dataMAp.clear()
   });
-  const myGroupStore = createStore({
-    group: {
-      value: 0,
-      func: (store, v) => (store.value += v)
-    }
-  });
-  expect(() => myGroupStore("23232")).toThrowError(
-    `23232 is undefined in the store.`
-  );
-  expect(() => myStore("")).toThrowError(
-    "Target is optional. But it need to be valid if passed. Actual value is empty, fix it or remove it"
-  );
-  expect(myStore.getActions()).not.toHaveProperty("value");
-  expect(myStore.getActions()).not.toHaveProperty("group.value");
-  expect(myStore.getActions()).not.toHaveProperty("group.value");
-  expect(myStore.getActions()).not.toHaveProperty("group.value");
+
+  expect(myStore.actions).not.toHaveProperty("value");
   //get group action
-  const { func } = myGroupStore.dispatcher.group;
+
   // dispatch slice action
-  myStore.getActions().func(15);
+  myStore.actions.func(15);
   // dispatch group action
-  func(2);
   // connect to group data
-  const data = myGroupStore("group.value");
-  const data_D1 = myGroupStore("group").value;
-  const data_D2 = myGroupStore("*").group.value;
-  expect(data).toBe(2);
-  expect(data_D1).toBe(2);
-  expect(data_D2).toBe(2);
   // connect to slice data
   expect(myStore().value).toBe(15);
   expect(myStore("value")).toBe(15);
 
   // Testing newProp
 
-  emptyStore.dispatcher.add();
+  emptyStore.actions.add();
   expect(emptyStore("newProp")).toBe(12);
 
   // testing array, Map, Set changes
-  const actions = myStore.getActions();
+  const actions = myStore.actions;
   actions.pushArr().setMap().addSet();
   const newData = myStore();
   expect(newData.arr).toContain("test");

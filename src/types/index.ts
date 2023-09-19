@@ -8,7 +8,8 @@ type StoreKeys<S> = {
     : S[Key] extends FunctionType
     ? never
     : S[Key] extends object
-    ? `${Key}` | `${Key}.${StoreKeys<S[Key]>}`
+    ? // ? `${Exclude<Key, symbol>}${"" | `.${StoreKeys<S[Key]>}`}`
+      `${Key}` | `${Key}.${StoreKeys<S[Key]>}`
     : `${Key}`;
 }[keyof S & string];
 
@@ -30,15 +31,13 @@ type StoreActions<S> = {
   [key in IncludeFunctions<S>]: (...values: unknown[]) => StoreActions<S>;
 };
 
-type StoreDataByTarget<S, K> = StoreDataOutput<S, K>;
-
-type StoreDataOutput<S, K> = K extends keyof S
+type StoreDataByTarget<S, K> = K extends keyof S
   ? keyof S[K] extends FunctionType
     ? never
     : S[K]
   : K extends `${infer FirstKey}.${infer SecondKey}`
   ? FirstKey extends keyof S
-    ? StoreDataOutput<S[FirstKey], SecondKey>
+    ? StoreDataByTarget<S[FirstKey], SecondKey>
     : never
   : CustomSuggestionType<S, K>;
 
@@ -51,28 +50,27 @@ type SubscribeType = {
 type FunctionType = (...args: unknown[]) => unknown;
 type DispatchType = (event: string) => void;
 
-type Store<S> = {
+type StoreType<S> = {
   getSnapshot: <Target extends StoreDataKey<S>>(
     target?: Target
   ) => StoreDataByTarget<S, Target>;
-  dispatcher: StoreActions<S>;
-  listen: <Target extends StoreDataKey<S>>(
-    event: Target,
+  actions: StoreActions<S>;
+  listen: <Target>(
+    event: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>,
     callback: (data: StoreDataByTarget<S, Target>) => void
   ) => () => void;
-  <Target>(
-    target?: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>
-    // check if target is passed, NonNullable help us by excluding null and undefined
+  // <Target extends StoreDataKey<S>[]>(
+  //   ...target: Target
+  // ): Target extends [string]
+  //   ? StoreDataByTarget<S, Target[keyof Target]>
+  //   : Target extends []
+  //   ? StoreData<S>
+  //   : { [Key in keyof Target]: StoreDataByTarget<S, Target[Key]> };
+  <Target extends StoreDataKey<S>>(
+    target?: Target
   ): Target extends NonNullable<string>
     ? StoreDataByTarget<S, Target>
-    : // Target is not present.
-      StoreData<S>;
+    : StoreData<S>;
 };
 
-type ErrorType = {
-  name: string;
-  message: string;
-  state?: any;
-};
-
-export type { Store, ErrorType, FunctionType, SubscribeType, DispatchType };
+export type { StoreType, FunctionType, SubscribeType, DispatchType };

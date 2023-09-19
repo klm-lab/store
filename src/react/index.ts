@@ -1,10 +1,10 @@
 import { useCallback, useSyncExternalStore } from "react";
-import type { Store } from "../types";
-import { finalize, getData } from "../util";
-import { InternalStore } from "../store";
+import type { FunctionType, StoreType } from "../types";
+import { finalize } from "../util";
+import { Store } from "../store";
 
-const createStore = <S>(store: S): Store<S> => {
-  const newStore = new InternalStore().init(store);
+const createStore = <S>(store: S): StoreType<S> => {
+  const newStore = new Store().init(store);
 
   const useSyncStore = (target?: string) => {
     return useStore(newStore, target);
@@ -13,13 +13,14 @@ const createStore = <S>(store: S): Store<S> => {
   return finalize(useSyncStore, newStore);
 };
 
-const useStore = (internalStore: InternalStore, target?: string) => {
+const useStore = (internalStore: Store, target?: string) => {
   const getSnapshot = useCallback(
-    () => getData(internalStore, target),
+    () => internalStore.getData(target),
     [target]
   );
   const dispatchData = useCallback(
-    (callback: any) => internalStore.subscribe(target ?? "*", callback),
+    (callback: FunctionType) =>
+      internalStore.subscribe(target ?? "*", callback),
     [target]
   );
   return useSyncExternalStore(dispatchData, getSnapshot, getSnapshot);

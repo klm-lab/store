@@ -1,6 +1,6 @@
 {
   "name": "aio-store",
-  "version": "2.2.2",
+  "version": "2.3.0",
   "description": "A javascript app state management",
   "keywords": [
     "react",
@@ -12,11 +12,21 @@
   "files": [
     "./**"
   ],
-  "main": "./lib/index.js",
-  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./react": {
+      "types": "./react/index.d.ts",
+      "import": "./react/index.js",
+      "default": "./react/index.js"
+    }
+  },
   "scripts": {
-    "build": "npm ci && npm run build:preview",
-    "build:preview": "npm run clean && npm run lint:prettier && npm run build:webpack && npm run build:dts",
+    "build": "npm ci && npm run build:noci",
+    "build:noci": "npm run clean && npm run lint:prettier && npm run build:webpack && npm run build:dts",
     "lint:prettier": "npm run lint && npm run prettier",
     "build:dts": "dts-bundle-generator --config ./dts.json && npm run clean:temp",
     "build:webpack": "webpack --config webpack.config.dev.ts && webpack --config webpack.config.prod.ts",

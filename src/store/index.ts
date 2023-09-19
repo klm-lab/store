@@ -1,28 +1,34 @@
 import { createProxy, removeProxy } from "../util";
-import type { SubscribeType } from "../types";
+import type { FunctionType, SubscribeType } from "../types";
 
-class InternalStore {
+class Store {
   private _store: any;
-  private _proxyStore: any;
-  private readonly _storeActions: any;
+  private _proxy: any;
+  private readonly _actions: any;
   readonly #events: SubscribeType;
   readonly #allListeners: Set<any>;
 
   constructor() {
     this._store = {};
-    this._proxyStore = {};
-    this._storeActions = {};
+    this._proxy = {};
+    this._actions = {};
     this.dispatch = this.dispatch.bind(this);
+    this.getData = this.getData.bind(this);
     this.#events = {};
     this.#allListeners = new Set();
   }
 
-  get store() {
-    return this._store;
+  get actions() {
+    return this._actions;
   }
 
-  get storeActions() {
-    return this._storeActions;
+  getData(target?: string) {
+    const paths = target ? (target === "*" ? [] : target.split(".")) : [];
+    let result = this._store;
+    paths.forEach((p: any) => {
+      result = result ? result[p] : result;
+    });
+    return result;
   }
 
   init(userStore: any) {
@@ -32,40 +38,37 @@ class InternalStore {
      * */
     for (const key in userStore) {
       if (typeof userStore[key] === "function") {
-        this._storeActions[key] = (...values: unknown[]) => {
-          userStore[key](this._proxyStore, ...values);
-          return this._storeActions;
+        this._actions[key] = (...values: unknown[]) => {
+          userStore[key](this._proxy, ...values);
+          return this._actions;
         };
       } else {
         this._store[key] = userStore[key];
       }
     }
     // We create a proxy with the store
-    this._proxyStore = createProxy(this._store, "", this.dispatch);
+    this._proxy = createProxy(this._store, "", this.dispatch);
     return this;
   }
 
-  subscribe(event: string, listener: any) {
-    const registeredEvent = event.split(".")[0];
+  subscribe(event: string, listener: FunctionType) {
+    const key = event.split(".")[0];
     if (event === "*") {
       this.#allListeners.add(listener);
       return () => this.#allListeners.delete(listener);
     }
-    if (!(registeredEvent in this.#events)) {
-      // Collection doesn't exist with this specific event. We create it
-      this.#events[registeredEvent] = new Set();
+    if (!(key in this.#events)) {
+      this.#events[key] = new Set();
     }
-    // We add the listener to the specific event collection
-    this.#events[registeredEvent].add(listener);
+    this.#events[key].add(listener);
     return () => {
-      // We delete the listener from the specific event collection
-      this.#events[registeredEvent].delete(listener);
+      this.#events[key].delete(listener);
     };
   }
 
   dispatch(event: string) {
     // Syncing the store
-    this._store = removeProxy(this._proxyStore);
+    this._store = removeProxy(this._proxy);
     // we get the rootKey as event
     const registeredEvent = event.split(".")[0];
     //Call all 'ALL' listeners if they are present
@@ -75,8 +78,10 @@ class InternalStore {
       return;
     }
     // Call listeners relative to the event if someone subscribes
-    this.#events[registeredEvent].forEach((listener: any) => listener());
+    this.#events[registeredEvent].forEach((listener: FunctionType) =>
+      listener()
+    );
   }
 }
 
-export { InternalStore };
+export { Store };
