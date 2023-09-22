@@ -8,23 +8,36 @@ type StoreKeys<S> = {
     : S[Key] extends FunctionType
     ? never
     : S[Key] extends object
-    ? // ? `${Exclude<Key, symbol>}${"" | `.${StoreKeys<S[Key]>}`}`
-      `${Key}` | `${Key}.${StoreKeys<S[Key]>}`
+    ? `${Key}` | `${Key}.${StoreKeys<S[Key]>}`
     : `${Key}`;
 }[keyof S & string];
 
 type StoreDataKey<S> = "*" | StoreKeys<S>;
 
-type ExcludeFunctions<S> = {
-  [Key in keyof S]: S[Key] extends FunctionType ? never : Key;
+/*
+ * When the value is null, key doesn't appear.
+ * So we explicitly check for null and force the key to appear
+ * */
+type ExcludeFunctions<S, Null = null> = {
+  // [Key in keyof S]: S[Key] extends FunctionType ? never : Key;
+  [Key in keyof S]: S[Key] extends FunctionType
+    ? S[Key] extends Null
+      ? Key
+      : never
+    : Key;
 }[keyof S];
 
 type StoreData<S> = {
   [key in ExcludeFunctions<S>]: S[key];
 };
 
-type IncludeFunctions<S> = {
-  [Key in keyof S]: S[Key] extends FunctionType ? Key : never;
+type IncludeFunctions<S, Null = null> = {
+  // [Key in keyof S]: S[Key] extends FunctionType ? Key : never;
+  [Key in keyof S]: S[Key] extends FunctionType
+    ? S[Key] extends Null
+      ? never
+      : Key
+    : never;
 }[keyof S];
 
 type StoreActions<S> = {
@@ -47,13 +60,16 @@ type SubscribeType = {
   [k in string]: Set<FunctionType>;
 };
 
-type FunctionType = (...args: unknown[]) => unknown;
+type FunctionType = (...args: any) => any;
+// type MixedFunctionType = (...args: any) => Promise<void> | any;
 type DispatchType = (event: string) => void;
 
 interface StoreType<S> {
-  getSnapshot<Target extends StoreDataKey<S>>(
-    target?: Target
+  getSnapshot<Target>(
+    target: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>
   ): StoreDataByTarget<S, Target>;
+
+  getSnapshot(): StoreData<S>;
 
   actions: StoreActions<S>;
 
@@ -69,11 +85,11 @@ interface StoreType<S> {
   //   : Target extends []
   //   ? StoreData<S>
   //   : { [Key in keyof Target]: StoreDataByTarget<S, Target[Key]> };
-  <Target extends StoreDataKey<S>>(
-    target?: Target
-  ): Target extends NonNullable<string>
-    ? StoreDataByTarget<S, Target>
-    : StoreData<S>;
+  <Target>(
+    target: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>
+  ): StoreDataByTarget<S, Target>;
+
+  (): StoreData<S>;
 }
 
 export type { StoreType, FunctionType, SubscribeType, DispatchType };
