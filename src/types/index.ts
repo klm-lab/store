@@ -50,15 +50,18 @@ type SubscribeType = {
 type FunctionType = (...args: unknown[]) => unknown;
 type DispatchType = (event: string) => void;
 
-type StoreType<S> = {
-  getSnapshot: <Target extends StoreDataKey<S>>(
+interface StoreType<S> {
+  getSnapshot<Target extends StoreDataKey<S>>(
     target?: Target
-  ) => StoreDataByTarget<S, Target>;
+  ): StoreDataByTarget<S, Target>;
+
   actions: StoreActions<S>;
-  listen: <Target>(
+
+  listen<Target>(
     event: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>,
     callback: (data: StoreDataByTarget<S, Target>) => void
-  ) => () => void;
+  ): () => void;
+
   // <Target extends StoreDataKey<S>[]>(
   //   ...target: Target
   // ): Target extends [string]
@@ -71,6 +74,6 @@ type StoreType<S> = {
   ): Target extends NonNullable<string>
     ? StoreDataByTarget<S, Target>
     : StoreData<S>;
-};
+}
 
 export type { StoreType, FunctionType, SubscribeType, DispatchType };
