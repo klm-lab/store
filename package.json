@@ -1,6 +1,6 @@
 {
   "name": "aio-store",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "A javascript app state management",
   "keywords": [
     "react",

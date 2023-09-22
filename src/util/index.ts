@@ -76,7 +76,7 @@ export function createProxy(
       dispatch
     );
   }
-  if (data instanceof Object) {
+  if (data?.constructor?.name === "Object") {
     const entries: any = Object.entries(data).map(([key, value]) => {
       if (!lock) {
         event = init !== "" ? `${init}` : `${key}`;
@@ -103,7 +103,7 @@ export function removeProxy(data: any): any {
   if (data instanceof Map || data instanceof Set) {
     return spyMapSet(data, data instanceof Map ? Map : Set, null, null);
   }
-  if (data instanceof Object) {
+  if (data?.constructor?.name === "Object") {
     const entries: any = Object.entries(Object.assign({}, data)).map(
       ([key, value]) => {
         return [key, removeProxy(value)];
@@ -113,6 +113,7 @@ export function removeProxy(data: any): any {
   }
   return data;
 }
+
 export const finalize = (output: any, store: Store) => {
   output.actions = store.actions;
   // attaching snapshot
