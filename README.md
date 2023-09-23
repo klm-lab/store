@@ -3,6 +3,13 @@
 <a href="https://github.com/klm-lab/store/#readme" target="_blank">
      <img src="assets/icon.svg" alt="icon" width="120" height="120">
 </a>
+
+![version][version-shield]
+![dependencies][dependencies-shield]
+![size][size-shield]
+![MIT License][license-shield]
+
+
 <div>
 <a align="center" href="https://codesandbox.io/s/store-demo-2lkdw4" target="_blank">View React demo</a> |
 <a align="center" href="https://codesandbox.io/s/vanilla-demo-2mwpsl" target="_blank">View Vanilla demo</a>
@@ -211,4 +218,13 @@ const useStore = createStore({
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+[MIT][license-url]
+
+
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-store?style=for-the-badge
+[dependencies-shield]: https://img.shields.io/badge/dependencies-0-green?style=for-the-badge
+[license-shield]: https://img.shields.io/github/license/klm-lab/store?style=for-the-badge
+[version-shield]: https://img.shields.io/npm/v/aio-store?style=for-the-badge
+
+
+[license-url]: https://choosealicense.com/licenses/mit/
