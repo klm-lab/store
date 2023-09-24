@@ -45,59 +45,41 @@ import { createStore } from "aio-store/react";
 
 ### Create a store
 
-This library makes the creation of a store really simple. When you create a store, in your actions, the first parameter
-will always be the store reference, his name is yours. If you want to pass other parameters, add them after the first
-parameter.
+This library makes the creation of a store really simple.
 
 ```js
 export const useExpStore = createStore({
   exp: 10,
-  updateExp: (storeRef, myParam, ...rest) => {
-    // storeRef point to {exp: 10, deep: ...}
-    storeRef.exp += myParam;
-  },
 });
 
-```
-
-### Actions with Promises
-Just act when you are ready
-```js
-const useStore = createStore({
-  myValue: 10,
-  setData: async (storeRef) => {
-    const value =  await callingServer();
-    storeRef.myValue = value
-  }
-})
 ```
 
 ### Use the store
 * **Anywhere in your app**
 
 ```js
-const store = myStore.getSnapshot()
+const store = myStore.get()
 ```
-* **Inside a component**
+* **Inside a React component**
 
 ```js
 import { useExpStore } from "./store";
 
 const MyComponent = () => {
 
-  // Realtime changes available for React users
+  // Realtime update for React users
   const { exp } = useExpStore();
 
   // ❗ this is just a snapshot, No realtime changes
-  const { exp } = useExpStore.getSnapshot();
+  const { exp } = useExpStore.get();
 
   // ❗ this is just a snapshot, No realtime changes
-  const exp = useExpStore.getSnapshot("exp");
+  const exp = useExpStore.get("exp");
 
-  // Realtime changes available for React users
+  // Realtime update available for React users
   const { exp } = useExpStore("*");
 
-  // Deeper data
+  // Deeper data with realtime update
   const deepValue = useExpStore("data.depp.moreDeep");
 
   return <span>{exp}</span>;
@@ -114,25 +96,26 @@ const myStore = createStore(...);
 // Listen to all changes
 myStore.listen('*', (data) => {
   // while listening, you can get a snapshot to do some control
-  // React user
-  const snap = myStore.getSnapshot()
-  // No hook users
+  // React user or vanilla users
+  const snap = myStore.get()
+  
+  // vanilla users
   const snap = myStore()
   
-  const someValue = myStore.getSnapshot("someValue")
+  const someValue = myStore.get("someValue")
   // do what ever you want with your data,
 })
 
 // Listen to specific changes
 myStore.listen('data.content.value', (data) => {
   // while listening, you can get a snapshot to do some control
-  const snap = myStore.getSnapshot()
-  const someValue = myStore.getSnapshot("someValue")
+  const snap = myStore.get()
+  const someValue = myStore.get("someValue")
   // do what ever you want with your data,
 })
 
 ```
-All event listener return an unsubscribe function
+The listen method returns an unsubscribe function
 
 ```js
 const unsubscribe = myStore.listen('data', (data) => {})
@@ -140,79 +123,64 @@ const unsubscribe = myStore.listen('data', (data) => {})
 unsubscribe()
 ```
 
-### Use your actions
-
-You can get your actions through the `actions` property and use them anywhere in your app, inside a component or not.
-
-> Note : <br/>
-> Every action is chainable. You can use it like this action().action().actions() and so on.
-> Or just call action(). It is totally up to you <br/>
-
-```js
-// Or
-const { putOil } = useCarStore.actions
-
-const putOil  = useCarStore.actions.putOil
-
-// And use it like this
-
-putOil() // or 
-
-putOil().takePassengers().drive() //and so on. depends on you
-```
-
 ### Mutation
-All changes you are doing in the store in made in a draft of your store in order to keep your store immutable<br>
+All changes you are doing in the store are made in a draft of your store in order to keep your store immutable<br>
 
 Do not mutate store like below. Please be aware that, `storeRef` or whatever the name you call it, is there as a reference to a draft of your real store.
-By doing this, it will not work. You are destroying the reference but no worries, your real store is still safe.
+By doing this, it will simply not work. You are destroying the reference but no worries, your real store is still safe.
 
 ```js
-const useStore = createStore({
+const myStore = createStore({
   myValue: 10,
-  setData: (storeRef) => {
-    // ❌ Bad, Don't do this
-    storeRef = {
-      myValue: 11
-    }
+})
+myStore.set(storeRef => {
+  // ❌ Bad, Don't do this
+  storeRef = {
+    myValue: 11
   }
 })
+
 ```
 Instead, do like following lines
 
 ```js
-const useStore = createStore({
+const myStore = createStore({
   myValue: 10,
-  setData: (storeRef) => {
-    // ✅ Good,
-    storeRef.MyValue = 11
-    // ✅ Good,
-    storeRef.MyValue = {
-      // ...whatever you want
-    }
-    // ✅ Good, you can add new Props
-    storeRef.newProp = {
-      // ...whatever you want
-    }
-    // ✅ Good,
-    storeRef.props.data = {
-      someData: someValue
-      // ...whatever you want
-    }
-    // ✅ Good, if props.data already exists
-    storeRef.props.data.someData += someValue
-  }
 })
+
+myStore.set(storeRef => {
+  storeRef.MyValue = 11
+  // ✅ Good,
+  storeRef.MyValue = {
+    // ...whatever you want
+  }
+  // ✅ Good, you can add new Props
+  storeRef.newProp = {
+    // ...whatever you want
+  }
+  // ✅ Good,
+  storeRef.props.data = {
+    someData: someValue
+    // ...whatever you want
+  }
+  // ✅ Good, if props.data already exists
+  storeRef.props.data.someData += someValue
+})
+```
+> [!NOTE]<br/>
+> Chainable mutation is supported.
+
+```js
+myStore.set(storeRef => {}).set(storeRef => {}) // and so on
 ```
 
 ## Available tools and options
 
 * `createStore` Let you create a store
-* `actions` A property attached to your store that lets you dispatch actions from any file.
-* `getSnapshot` A Function attached to your store that lets you get a snapshot of your store at any time.
+* `set` A property attached to your store that lets you dispatch actions from any file.
+* `get` A Function attached to your store that lets you get a snapshot of your store at any time.
 * `listen` A Function attached to your store that lets you listen to changes in all or specific part of your store.
-* `*` A key that can be passed to your store in order to get everything in that store. It is similar to passing
-  nothing.
+* `*` A key that can be passed to your store in order to get everything or to listen to all changes in your store.
 
 <!-- LICENSE -->
 
