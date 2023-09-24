@@ -189,7 +189,7 @@ myStore.set(storeRef => {}).set(storeRef => {}) // and so on
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-store?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-store/2.4.0?style=for-the-badge
 [dependencies-shield]: https://img.shields.io/badge/dependencies-0-green?style=for-the-badge
 [license-shield]: https://img.shields.io/github/license/klm-lab/store?style=for-the-badge
 [version-shield]: https://img.shields.io/npm/v/aio-store?style=for-the-badge
