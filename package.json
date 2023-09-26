@@ -46,7 +46,9 @@
     "clean:temp:unix": "npm run clean:check:unix || rm -rf temp",
     "npm:pack": "npm pack",
     "test": "vitest",
-    "test-coverage": "vitest run --coverage"
+    "test-coverage": "vitest run --coverage",
+    "local:publish": "cd lib && npm publish --registry http://localhost:200/ && cd ..",
+    "cache:install": "npm i --registry http://localhost:200/"
   },
   "repository": {
     "type": "git",
@@ -78,8 +80,5 @@
     "webpack": "^5.88.2",
     "webpack-bundle-analyzer": "^4.9.1",
     "webpack-cli": "^5.1.4"
-  },
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org"
   }
 }
