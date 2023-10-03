@@ -22,12 +22,14 @@ const proxyTrap = (event: any, signals: any) => {
         const correctEvent = event[key] ?? event.locked ?? key;
         state[key] = createProxy(value, correctEvent, signals);
         signals.add(correctEvent);
+        signals.add("*");
       }
       return true;
     },
     deleteProperty: (target: any, prop: any) => {
       delete target[prop];
       signals.add(event[prop] ?? event.locked ?? prop);
+      signals.add("*");
       return true;
     }
   };
@@ -90,13 +92,10 @@ function init(store: any, fn?: FunctionType) {
   const changes: Set<string> = new Set();
   const proxy = createProxy(store, "", changes);
   const signals: SubscribeType = {};
-  const allListeners: Set<FunctionType> = new Set();
 
   const dispatch = () => {
     // Syncing the store
     store = removeProxy(proxy);
-    //Call all 'ALL' listeners if they are present
-    allListeners.forEach((listener: FunctionType) => listener());
     // Dispatch all changes
     changes.forEach((change) => {
       // Change that maybe is valid and exists with no subscribers
@@ -125,11 +124,7 @@ function init(store: any, fn?: FunctionType) {
   };
 
   const subscribe = (event: string, listener: FunctionType) => {
-    const key = event.split(".")[0];
-    if (event === "*") {
-      allListeners.add(listener);
-      return () => allListeners.delete(listener);
-    }
+    const key = event ? event.split(".")[0] : "*";
     if (!(key in signals)) {
       signals[key] = new Set();
     }
