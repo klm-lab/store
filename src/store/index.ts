@@ -1,129 +1,236 @@
 import type { FunctionType, SubscribeType } from "../types";
 
-const proxyTrap = (event: any, signals: any) => {
+const O = Object;
+
+class M extends Map {
+  // e is event
+  private readonly e: string;
+  // 'i' is init to avoid dispatch on init
+  private i: boolean;
+  // C is changes in the store
+  private readonly c: Set<string>;
+  private readonly a: FunctionType;
+
+  constructor(changes: Set<string>, event: string, init: boolean) {
+    super();
+    this.e = event;
+    this.i = init;
+    this.c = changes;
+    this.a = () => !this.i && changes.add(event);
+  }
+
+  // n is a method to signal the end of initialisation
+  n() {
+    this.i = false;
+  }
+
+  set(key: any, value: any) {
+    super.set(key, proxy(value, `${this.e}`, this.c, true));
+    this.a();
+    return this;
+  }
+
+  clear() {
+    super.clear();
+    this.a();
+  }
+
+  delete(key: any) {
+    super.delete(key);
+    this.a();
+    return true;
+  }
+}
+
+class Se extends Set {
+  private readonly e: string;
+  private i: boolean;
+  private readonly c: Set<string>;
+  private readonly a: FunctionType;
+
+  constructor(changes: Set<string>, event: string, init: boolean) {
+    super();
+    this.e = event;
+    this.i = init;
+    this.c = changes;
+    this.a = () => !this.i && changes.add(event);
+  }
+
+  n() {
+    this.i = false;
+  }
+
+  add(value: any) {
+    super.add(proxy(value, this.e, this.c, true));
+    this.a();
+    return this;
+  }
+
+  clear() {
+    super.clear();
+    this.a();
+  }
+
+  delete(value: any) {
+    super.delete(value);
+    this.a();
+    return true;
+  }
+}
+
+// Sync removes the proxy
+const sync = (data: any): any => {
+  if (data instanceof Array) {
+    return data.map(sync);
+  }
+  if (data instanceof Map || data instanceof Set) {
+    return spy(data, data instanceof Map ? Map : Set, null, null);
+  }
+  if (data?.constructor?.name === "Object") {
+    const entries: any = O.entries(O.assign({}, data)).map(([key, value]) => {
+      return [key, sync(value)];
+    });
+    return O.fromEntries(entries);
+  }
+  return data;
+};
+
+/**
+ * Spy will track activity on a Mp or a Set if changes is passed, otherwise,
+ * it will remove tracker from Map or Set.
+ * If user has a Map in the store, we recreate A trackable Map to be able to listen to
+ * changes, And when syncing, we recreate Built-int default Map.
+ * @param {M | Se | Map<any, any> | Set<any>} data . The user data
+ * @param {M | Se | Map<any, any> | Set<any>} Spy Our target data, can be a trackable or built-in Map or Set
+ * @param {string | null} event  The event to dispatch
+ * @param {Set<string> | null} changes to set changes in Map or Set. It can be null if we are syncing
+ * @return {Map<any, any> | Set<any>} A trackable or built-in Map or Set
+ */
+const spy = (
+  data: M | Se | Map<any, any> | Set<any>,
+  Spy: any,
+  event: string | null,
+  changes: Set<string> | null
+): M | Se | Map<any, any> | Set<any> => {
+  const s = new Spy(changes, event, !!changes);
+  data.forEach((v: any, k: any) => {
+    if (s instanceof Map) {
+      s.set(k, event ? changes && v : sync(v));
+    } else {
+      s.add(event ? changes && v : sync(v));
+    }
+  });
+  s.n && s.n();
+  return s;
+};
+
+const trap = (event: any, changes: Set<string>) => {
   return {
     set: (state: any, key: any, value: any) => {
-      if (state[key] !== value) {
-        /* The correctEvent is find like this.
-         * If event[key] exists, that means,
-         * For ex: {data: {value: 10}} has a change in 'value', event will be {value: "data.value.data"}
-         * Then event[key] exist and correctEvent with be "data.value.data".
-         * If it doesn't exist, we checked if some event is locked.
-         * For example : {data: {value: []}}. Data is an array and the key of that array will be 0, 1, 2 ...
-         * event["0"] will never exist in that case. So we take the locked event which is lock to value. and we dispatch
-         * 'data.value'.
-         * Something for empty object
-         * Ex: data = {};
-         * then {}[someKey] doesn't exist, so, we take the locked one.
-         *
-         * And now if the locked one doesn't exist also, like here, {}[key],
-         * we take the key as event
-         * */
-        const correctEvent = event[key] ?? event.locked ?? key;
-        state[key] = createProxy(value, correctEvent, signals);
-        signals.add(correctEvent);
-        signals.add("*");
-      }
+      /* The correctEvent is find like this. Please, note l as locked
+       * If event[key] exists, that means,
+       * For ex: {data: {value: 10}} has a change in 'value', event will be {value: "data"}
+       * Then event[key] exist and correctEvent with be "data".
+       * If it doesn't exist, we checked if some event is locked.
+       * For example : {data: {value: []}}. Data is an array and the key of that array will be 0, 1, 2 ...
+       * event["0"] will never exist in that case. So we take the locked event which is lock to value. and we dispatch
+       * 'value'.
+       * Something for empty object
+       * Ex: data = {};
+       * then {}[someKey] doesn't exist, so, we take the locked one.
+       *
+       * And now if the locked one doesn't exist also, like here, {}[key],
+       * we take the key as event
+       * */
+      const correctEvent = event[key] ?? event.l ?? key;
+      state[key] = proxy(value, correctEvent, changes);
+      changes.add(correctEvent);
       return true;
     },
     deleteProperty: (target: any, prop: any) => {
       delete target[prop];
-      signals.add(event[prop] ?? event.locked ?? prop);
-      signals.add("*");
+      changes.add(event[prop] ?? event.l ?? prop);
       return true;
     }
   };
 };
 
-const createProxy = (
+const proxy = (
   data: any,
   event: string,
-  signals: Set<string>,
+  changes: Set<string>,
   lock = false,
   // helpers
   init = event,
-  finalEvent = {} as any
+  helper = {} as any
 ): any => {
   // console.log("entered with =>", event, helpers.rootEvent, typeof event);
   if (data instanceof Array) {
-    finalEvent.locked = event;
+    helper.l = event;
     return new Proxy(
-      data.map((value) => createProxy(value, event, signals, true)),
-      proxyTrap(finalEvent, signals)
+      data.map((value) => proxy(value, event, changes, true)),
+      trap(helper, changes)
     );
   }
+
+  if (data instanceof Map || data instanceof Set) {
+    // console.warn("locked map event", event);
+    return spy(data, data instanceof Map ? M : Se, event, changes);
+  }
+
   /* We use constructor here because, Pretty many things are instance of Object in javascript
    * We need to be sure that it is an Object
    * */
   if (data?.constructor?.name === "Object") {
-    const entries: any = Object.entries(data).map(([key, value]) => {
+    const entries: any = O.entries(data).map(([key, value]) => {
       if (!lock) {
-        event = init !== "" ? `${init}` : `${key}`;
-        finalEvent[key] = event;
+        event = init !== "" ? init : key;
+        helper[key] = event;
       } else {
-        finalEvent[key] = event;
+        helper[key] = event;
       }
-      return [key, createProxy(value, event, signals, lock)];
+      return [key, proxy(value, event, changes, lock)];
     });
-    return new Proxy(
-      Object.fromEntries(entries),
-      proxyTrap(finalEvent, signals)
-    );
+    helper.l = event;
+    return new Proxy(O.fromEntries(entries), trap(helper, changes));
   }
   return data;
 };
 
-function removeProxy(data: any): any {
-  if (data instanceof Array) {
-    return data.map(removeProxy);
-  }
-  if (data?.constructor?.name === "Object") {
-    const entries: any = Object.entries(Object.assign({}, data)).map(
-      ([key, value]) => {
-        return [key, removeProxy(value)];
-      }
-    );
-    return Object.fromEntries(entries);
-  }
-  return data;
-}
-
-function init(store: any, fn?: FunctionType) {
+const init = (store: any, fn?: FunctionType) => {
   const changes: Set<string> = new Set();
-  const proxy = createProxy(store, "", changes);
+  const draft = proxy(store, "", changes);
   const signals: SubscribeType = {};
 
-  const dispatch = () => {
+  const set = (callback: FunctionType) => {
+    callback(draft);
+    changes.add("*");
     // Syncing the store
-    store = removeProxy(proxy);
+    store = sync(draft);
     // Dispatch all changes
     changes.forEach((change) => {
-      // Change that maybe is valid and exists with no subscribers
-      if (!(change in signals)) {
-        return;
+      // Change may be valid with no subscribers
+      if (change in signals) {
+        // Call listeners relative to the change if someone subscribes
+        signals[change].forEach((listener: FunctionType) => listener());
       }
-      // Call listeners relative to the change if someone subscribes
-      signals[change].forEach((listener: FunctionType) => listener());
     });
     // Clear all changes
     changes.clear();
   };
-  const set = (callback: FunctionType) => {
-    callback(proxy);
-    dispatch();
-    return { set };
-  };
 
   const get = (target?: string) => {
-    const paths = target ? (target === "*" ? [] : target.split(".")) : [];
-    let result = store;
-    paths.forEach((p: string) => {
-      result = result ? result[p] : result;
-    });
-    return result;
+    let s = store;
+    if (target && target !== "*") {
+      target.split(".").forEach((p: string) => {
+        s = s ? s[p] : s;
+      });
+      return s;
+    }
+    return s;
   };
 
-  const subscribe = (event: string, listener: FunctionType) => {
+  const sub = (event: string, listener: FunctionType) => {
     const key = event ? event.split(".")[0] : "*";
     if (!(key in signals)) {
       signals[key] = new Set();
@@ -135,28 +242,17 @@ function init(store: any, fn?: FunctionType) {
   };
 
   const listen = (target: string, callback: FunctionType) => {
-    let cache = get(target);
-    return subscribe(target, () => {
-      const data = get(target);
-      if (cache !== data) {
-        cache = data;
-        callback(cache);
-      }
+    return sub(target, () => {
+      callback(get(target));
     });
   };
 
-  if (fn) {
-    const output = (target?: string) => fn({ get, subscribe }, target);
-    output.get = get;
-    output.set = set;
-    output.listen = listen;
-    return output;
-  }
-  const output = (target?: string) => get(target);
+  const output = (target?: string) =>
+    fn ? fn({ get, sub }, target) : get(target);
   output.get = get;
   output.set = set;
   output.listen = listen;
   return output;
-}
+};
 
 export { init };
