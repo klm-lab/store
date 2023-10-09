@@ -1,15 +1,15 @@
 import { useCallback, useSyncExternalStore } from "react";
-import type { FunctionType, ReactHook, StoreType } from "../types";
+import type { FunctionType, Util, StoreType } from "../types";
 import { init } from "../store";
 
 const createStore = <S>(store: S): StoreType<S> => {
-  return init(store, (store: ReactHook, target?: string) => {
-    const getSnapshot = useCallback(() => store.get(target), [target]);
-    const dispatchData = useCallback(
-      (callback: FunctionType) => store.subscribe(target ?? "*", callback),
+  return init(store, (util: Util, target?: string) => {
+    const get = useCallback(() => util.get(target), [target]);
+    const dp = useCallback(
+      (cb: FunctionType) => util.sub(target, cb),
       [target]
     );
-    return useSyncExternalStore(dispatchData, getSnapshot, getSnapshot);
+    return useSyncExternalStore(dp, get, get);
   });
 };
 

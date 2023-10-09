@@ -26,9 +26,9 @@ type SubscribeType = {
   [k in string]: Set<FunctionType>;
 };
 
-type ReactHook = {
+type Util = {
   get: FunctionType;
-  subscribe: FunctionType;
+  sub: FunctionType;
 };
 
 type FunctionType = (...args: any) => any;
@@ -37,12 +37,8 @@ interface GetStoreRef<S> {
   (storeRef: S): void;
 }
 
-interface MutateStore<S> {
-  set(getStoreRef: GetStoreRef<S>): MutateStore<S>;
-}
-
-interface StoreType<S> extends MutateStore<S> {
-  // set(getStoreRef: GetStoreRef<S>): void;
+interface StoreType<S> {
+  set(getStoreRef: GetStoreRef<S>): void;
 
   get<Target>(
     target: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>
@@ -62,4 +58,4 @@ interface StoreType<S> extends MutateStore<S> {
   (): S;
 }
 
-export type { StoreType, FunctionType, SubscribeType, ReactHook };
+export type { StoreType, FunctionType, SubscribeType, Util };

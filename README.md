@@ -45,7 +45,7 @@ import { createStore } from "aio-store/react";
 
 ### Create a store
 
-This library makes the creation of a store really simple.
+Just create your store, No actions is needed
 
 ```js
 export const useExpStore = createStore({
@@ -79,7 +79,7 @@ const MyComponent = () => {
   // Realtime update available for React users
   const { exp } = useExpStore("*");
 
-  // Deeper data with realtime update
+  // Deep data with realtime update
   const deepValue = useExpStore("data.depp.moreDeep");
 
   return <span>{exp}</span>;
@@ -108,7 +108,7 @@ myStore.listen('*', (data) => {
 
 // Listen to specific changes
 myStore.listen('data.content.value', (data) => {
-  // while listening, you can get a snapshot to do some control
+  // while listening, you can get a snapshot
   const snap = myStore.get()
   const someValue = myStore.get("someValue")
   // do what ever you want with your data,
@@ -124,17 +124,18 @@ unsubscribe()
 ```
 
 ### Mutation
-All changes you are doing in the store are made in a draft of your store in order to keep your store immutable<br>
+Your store is immutable, you will always get a fresh store.<br>
+When you mutate your store, Please be aware that, `storeRef` or whatever the name you call it, point to a reference of your store.<br>
+So do not override the reference.
 
-Do not mutate store like below. Please be aware that, `storeRef` or whatever the name you call it, is there as a reference to a draft of your real store.
-By doing this, it will simply not work. You are destroying the reference but no worries, your real store is still safe.
+#### Mutate Object
 
 ```js
 const myStore = createStore({
   myValue: 10,
 })
 myStore.set(storeRef => {
-  // ❌ Bad, Don't do this
+  // ❌ Bad, Don't do this.
   storeRef = {
     myValue: 11
   }
@@ -167,11 +168,94 @@ myStore.set(storeRef => {
   storeRef.props.data.someData += someValue
 })
 ```
-> [!NOTE]<br/>
-> Chainable mutation is supported.
+
+#### Mutate Array
+```js
+const myStore = createStore({
+  arr: [{name: "default"}],
+})
+
+myStore.set(storeRef => {
+  // Mutation inside the array
+  storeRef.arr[0].name = "New name";
+  storeRef.arr.push("new item")
+// Mutation with new array or clean the array
+  storeRef.arr.length = 0
+  // Or 
+  storeRef.arr = []
+})
+```
+
+#### Mutate Map / Set
+```js
+const myStore = createStore({
+  map: new Map(),
+  set: new Set(),
+  setContainsMap: new Set().add(new Map()),
+  mapContainsSet: new Map().set("mySet",new Set()),
+})
+// Mutation inside the array
+myStore.set(storeRef => {
+  // Mutation inside a map
+  storeRef.map.set("new Key", "new value")
+  // Mutation inside a set
+  storeRef.set.add("new value")
+  // Mutation inside setContainsMap
+  storeRef.setContainsMap.forEach(s => {
+    // S is a Map
+    s.set("new Key", "new value")
+  })
+  // Mutation inside mapContainsSet
+  storeRef.mapContainsSet.get("mySet").add("new Value")
+  // Cleaning
+  storeRef.mapContainsSet.clear()
+  storeRef.setContainsMap.clear()
+})
+```
+#### Transferring the ref
+When you do not want to repeat yourself, It is useful to save a reference of the updated part and use it multiple times.<br>
+But always take care of not destroying that reference
 
 ```js
-myStore.set(storeRef => {}).set(storeRef => {}) // and so on
+const myStore = createStore({
+  data: {
+    deep: {
+      moreDeep: {}
+    }
+  }
+})
+
+myStore.set(storeRef => {
+  const moreDeep = storeRef.data.deep.moreDeep;
+  
+  // Use moreDeep ✅
+  moreDeep.newProp1 = "new value 1"
+  moreDeep.newProp2 = "new value 2"
+
+  let deep = storeRef.data.deep;
+
+  // Use moreDeep ✅
+  deep.moreDeep = {
+    newProp1: "new value 1",
+    newProp2: "new value 2"
+  }
+
+  let moreDeep = storeRef.data.deep.moreDeep;
+  
+  // ❌ you are destroying the reference.
+  // ❌ moreDeep is not pointing anymore the real moreDeep.
+  // ❌ It has a new reference
+  moreDeep = {
+    newProp1: "new value 1",
+    newProp2: "new value 2"
+  }
+  // But This is fine ✅
+  // Because the storeRef is in charge
+  storeRef.data.deep.moreDeep = {
+    newProp1: "new value 1",
+    newProp2: "new value 2"
+  }
+})
 ```
 
 ## Available tools and options
@@ -189,7 +273,7 @@ myStore.set(storeRef => {}).set(storeRef => {}) // and so on
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-store/2.4.0?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-store/2.4.1?style=for-the-badge
 [dependencies-shield]: https://img.shields.io/badge/dependencies-0-green?style=for-the-badge
 [license-shield]: https://img.shields.io/github/license/klm-lab/store?style=for-the-badge
 [version-shield]: https://img.shields.io/npm/v/aio-store?style=for-the-badge

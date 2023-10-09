@@ -1,0 +1,1 @@
+ // klm-lab => local_npm, verdaccio docker
