@@ -3,18 +3,19 @@
     "moduleResolution": "node",
     "target": "es2015",
     "esModuleInterop": true,
-    "module": "ESNext",
+    "module": "esnext",
     "lib": [
       "ESNext",
       "DOM"
     ],
     "rootDir": "./src",
+    "declaration": true,
+    "declarationDir": "./temp",
     "removeComments": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": false,
-    // "noImplicitAny": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "strictBindCallApply": true,
@@ -25,9 +26,9 @@
     "noUnusedParameters": true,
     "noEmitOnError": true
   },
-  "include": [
-    "src/**/*"
-  ],
+    "include": [
+      "src/**/*"
+    ],
   "exclude": [
     "node_modules",
     "**/tests",
