@@ -1,6 +1,6 @@
 {
   "compilationOptions": {
-    "preferredConfigPath": "./tsconfig.json"
+    "preferredConfigPath": "./dtsConfig.json"
   },
 
   "entries": [
