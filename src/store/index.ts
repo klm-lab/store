@@ -219,19 +219,17 @@ const init = (store: any, fn?: FunctionType) => {
     changes.clear();
   };
 
-  const get = (target?: string) => {
-    let s = store;
-    if (target && target !== "*") {
-      target.split(".").forEach((p: string) => {
-        s = s ? s[p] : s;
-      });
-      return s;
-    }
-    return s;
+  const vGet = (target: string = "*") => get(target, sync(draft));
+
+  const get = (target: string, data: any) => {
+    target.split(".").forEach((p: string) => {
+      data = target === "*" ? data : data ? data[p] : data;
+    });
+    return data;
   };
 
-  const sub = (event: string, listener: FunctionType) => {
-    const key = event ? event.split(".")[0] : "*";
+  const sub = (event: string = "*", listener: FunctionType) => {
+    const key = event.split(".")[0];
     if (!(key in signals)) {
       signals[key] = new Set();
     }
@@ -243,13 +241,15 @@ const init = (store: any, fn?: FunctionType) => {
 
   const listen = (target: string, callback: FunctionType) => {
     return sub(target, () => {
-      callback(get(target));
+      callback(vGet(target));
     });
   };
 
   const output = (target?: string) =>
-    fn ? fn({ get, sub }, target) : get(target);
-  output.get = get;
+    fn
+      ? fn({ get: (target: string = "*") => get(target, store), sub }, target)
+      : vGet(target);
+  output.get = vGet;
   output.set = set;
   output.listen = listen;
   return output;
