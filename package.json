@@ -88,5 +88,8 @@
     "prettier": "3.0.1",
     "rollup-plugin-copy": "^3.5.0",
     "typescript": "^5.2.2"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
   }
 }
