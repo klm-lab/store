@@ -1,6 +1,6 @@
 {
   "name": "aio-store",
-  "version": "2.4.3",
+  "version": "2.4.4",
   "description": "A javascript app state management",
   "keywords": [
     "react",
@@ -88,5 +88,8 @@
     "prettier": "3.0.1",
     "rollup-plugin-copy": "^3.5.0",
     "typescript": "^5.2.2"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
   }
 }
