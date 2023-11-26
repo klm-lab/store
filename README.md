@@ -4,6 +4,7 @@
      <img src="assets/icon.svg" alt="icon" width="120" height="120">
 </a>
 
+![publish][action-shield]
 ![version][version-shield]
 ![dependencies][dependencies-shield]
 ![size][size-shield]
@@ -273,10 +274,11 @@ myStore.set(storeRef => {
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-store/2.4.41?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-store/2.4.42?style=for-the-badge
 [dependencies-shield]: https://img.shields.io/badge/dependencies-0-green?style=for-the-badge
 [license-shield]: https://img.shields.io/github/license/klm-lab/store?style=for-the-badge
 [version-shield]: https://img.shields.io/npm/v/aio-store?style=for-the-badge
+[action-shield]: https://img.shields.io/github/actions/workflow/status/klm-lab/store/publish.yml?style=for-the-badge
 
 
 [license-url]: https://choosealicense.com/licenses/mit/

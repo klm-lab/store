@@ -8,21 +8,21 @@ module.exports = [
   {
     input: "./src/index.ts",
     output: [
+      // {
+      //   file: "lib/index.js",
+      //   format: "cjs"
+      // },
       {
         file: "lib/index.js",
-        format: "cjs"
-      },
-      {
-        file: "lib/index.min.js",
         format: "cjs",
         plugins: [terser()]
       },
+      // {
+      //   file: "lib/index.esm.js",
+      //   format: "esm"
+      // },
       {
-        file: "lib/index.esm.js",
-        format: "esm"
-      },
-      {
-        file: "lib/index.esm.min.js",
+        file: "lib/index.mjs",
         format: "esm",
         plugins: [terser()]
       }
@@ -37,21 +37,21 @@ module.exports = [
   {
     input: "./src/react/index.ts",
     output: [
+      // {
+      //   file: "lib/react/index.js",
+      //   format: "cjs"
+      // },
       {
         file: "lib/react/index.js",
-        format: "cjs"
-      },
-      {
-        file: "lib/react/index.min.js",
         format: "cjs",
         plugins: [terser()]
       },
+      // {
+      //   file: "lib/react/index.esm.js",
+      //   format: "esm"
+      // },
       {
-        file: "lib/react/index.esm.js",
-        format: "esm"
-      },
-      {
-        file: "lib/react/index.esm.min.js",
+        file: "lib/react/index.mjs",
         format: "esm",
         plugins: [terser()]
       }

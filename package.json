@@ -1,6 +1,6 @@
 {
   "name": "aio-store",
-  "version": "2.4.41",
+  "version": "2.4.42",
   "description": "A javascript app state management",
   "keywords": [
     "react",
@@ -15,26 +15,16 @@
   "exports": {
     ".": {
       "types": "./index.d.ts",
-      "development": {
-        "import": "./index.esm.js",
-        "require": "./index.js"
-      },
-      "production": {
-        "import": "./index.esm.min.js",
-        "require": "./index.min.js"
-      },
+      "import": "./index.mjs",
+      "module": "./index.mjs",
+      "require": "./index.js",
       "default": "./index.js"
     },
     "./react": {
       "types": "./react/index.d.ts",
-      "development": {
-        "import": "./react/index.esm.js",
-        "require": "./react/index.js"
-      },
-      "production": {
-        "import": "./react/index.esm.min.js",
-        "require": "./react/index.min.js"
-      },
+      "import": "./react/index.mjs",
+      "module": "./react/index.mjs",
+      "require": "./react/index.js",
       "default": "./react/index.js"
     }
   },
@@ -91,6 +81,11 @@
   },
   "peerDependencies": {
     "react": "^18.2.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   },
   "sideEffects": false
 }
