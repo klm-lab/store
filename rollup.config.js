@@ -24,7 +24,13 @@ module.exports = [
       {
         file: "lib/index.mjs",
         format: "esm",
-        plugins: [terser()]
+        plugins: [
+          terser({
+            compress: true,
+            ecma: 2020,
+            module: true
+          })
+        ]
       }
     ],
     plugins: [
@@ -53,7 +59,13 @@ module.exports = [
       {
         file: "lib/react/index.mjs",
         format: "esm",
-        plugins: [terser()]
+        plugins: [
+          terser({
+            compress: true,
+            ecma: 2020,
+            module: true
+          })
+        ]
       }
     ],
     plugins: [
