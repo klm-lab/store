@@ -3,24 +3,20 @@ const commonjs = require("@rollup/plugin-commonjs");
 const typescript = require("@rollup/plugin-typescript");
 const terser = require("@rollup/plugin-terser");
 const copy = require("rollup-plugin-copy");
-
+const plugins = [
+  nodeResolve(),
+  commonjs(),
+  typescript({ tsconfig: "./tsconfig.json" })
+];
 module.exports = [
   {
-    input: "./src/index.ts",
+    input: "./src/store/index.ts",
     output: [
-      // {
-      //   file: "lib/index.js",
-      //   format: "cjs"
-      // },
       {
         file: "lib/index.js",
         format: "cjs",
         plugins: [terser()]
       },
-      // {
-      //   file: "lib/index.esm.js",
-      //   format: "esm"
-      // },
       {
         file: "lib/index.mjs",
         format: "esm",
@@ -33,29 +29,17 @@ module.exports = [
         ]
       }
     ],
-    plugins: [
-      nodeResolve(),
-      commonjs(),
-      typescript({ tsconfig: "./tsconfig.json" })
-    ],
+    plugins: plugins,
     external: [/node_modules/]
   },
   {
     input: "./src/react/index.ts",
     output: [
-      // {
-      //   file: "lib/react/index.js",
-      //   format: "cjs"
-      // },
       {
         file: "lib/react/index.js",
         format: "cjs",
         plugins: [terser()]
       },
-      // {
-      //   file: "lib/react/index.esm.js",
-      //   format: "esm"
-      // },
       {
         file: "lib/react/index.mjs",
         format: "esm",
@@ -69,9 +53,7 @@ module.exports = [
       }
     ],
     plugins: [
-      nodeResolve(),
-      commonjs(),
-      typescript({ tsconfig: "./tsconfig.json" }),
+      ...plugins,
       copy({
         targets: [
           { src: "./package.json", dest: "lib/" },
