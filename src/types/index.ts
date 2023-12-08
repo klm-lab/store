@@ -22,15 +22,6 @@ type StoreDataByTarget<S, K> = K extends keyof S
 
 type CustomSuggestionType<S, K> = K extends "*" ? S : never;
 
-type SubscribeType = {
-  [k in string]: Set<FunctionType>;
-};
-
-type Util = {
-  get: FunctionType;
-  sub: FunctionType;
-};
-
 type FunctionType = (...args: any) => any;
 
 interface GetStoreRef<S> {
@@ -58,4 +49,4 @@ interface StoreType<S> {
   (): S;
 }
 
-export type { StoreType, FunctionType, SubscribeType, Util };
+export type { StoreType, FunctionType };

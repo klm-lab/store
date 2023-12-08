@@ -5,7 +5,7 @@
 
   "entries": [
     {
-      "filePath": "./src/index.ts",
+      "filePath": "./src/store/index.ts",
       "outFile": "./lib/index.d.ts",
       "output": {
         "sortNodes": true

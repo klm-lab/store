@@ -1,16 +1,13 @@
+import type { FunctionType, StoreType } from "../types";
 import { useCallback, useSyncExternalStore } from "react";
-import type { FunctionType, Util, StoreType } from "../types";
-import { init } from "../store";
+import { createStore as init } from "../store";
 
-const createStore = <S>(store: S): StoreType<S> => {
-  return init(store, (util: Util, target?: string) => {
-    const get = useCallback(() => util.get(target), [target]);
-    const dp = useCallback(
-      (cb: FunctionType) => util.sub(target, cb),
-      [target]
-    );
-    return useSyncExternalStore(dp, get, get);
-  });
+export const createStore = <S>(store: S): StoreType<S> => {
+  return init(
+    store,
+    (get: FunctionType, sub: FunctionType, target?: string) => {
+      const getS = useCallback(() => get(target), [target]);
+      return useSyncExternalStore(sub, getS, getS);
+    }
+  );
 };
-
-export { createStore };
