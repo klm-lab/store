@@ -86,6 +86,34 @@ const MyComponent = () => {
   return <span>{exp}</span>;
 };
 ```
+* **With selector**
+
+Get your store and return whatever you want in any format
+
+```js
+import { useExpStore } from "./store";
+
+const MyComponent = () => {
+
+  // Realtime update for React users
+  const { exp } = useExpStore(store => ({exp: store.exp}));
+
+  // ❗ this is just a snapshot, No realtime changes
+  const { exp } = useExpStore.get(store => ({exp: store.exp}));
+
+  // ❗ this is just a snapshot, No realtime changes
+  const exp = useExpStore.get(store => store.exp);
+
+  // Realtime update available for React users
+  const exp = useExpStore(store => store.exp);
+
+  // Deep data with realtime update
+  const deepValue = useExpStore("data.depp.moreDeep");
+
+  return <span>{exp}</span>;
+};
+```
+
 * **With listener**
 
 You can listen to your store changes anywhere in your app and update something stateless.<br>
@@ -274,7 +302,7 @@ myStore.set(storeRef => {
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-store/2.4.44?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-store/2.5.0?style=for-the-badge
 [dependencies-shield]: https://img.shields.io/badge/dependencies-0-green?style=for-the-badge
 [license-shield]: https://img.shields.io/github/license/klm-lab/store?style=for-the-badge
 [version-shield]: https://img.shields.io/npm/v/aio-store?style=for-the-badge

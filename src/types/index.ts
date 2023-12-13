@@ -1,3 +1,4 @@
+type Unknow = any;
 type StoreKeys<S> = {
   [Key in keyof S & string]: S[Key] extends
     | Map<any, any>
@@ -28,12 +29,44 @@ interface GetStoreRef<S> {
   (storeRef: S): void;
 }
 
+// interface StoreType<S> {
+//   set(getStoreRef: GetStoreRef<S>): void;
+//   get<Target>(
+//     target: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>
+//   ): StoreDataByTarget<S, Target>;
+//
+//   //get<T extends Selector<S>>(selector: T): ReturnType<T>;
+//
+//   get(): S;
+//
+//   listen<Target>(
+//     target: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>,
+//     callback: (data: StoreDataByTarget<S, Target>) => void
+//   ): () => void;
+//
+//   <Target>(
+//     target: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>
+//   ): StoreDataByTarget<S, Target>;
+//
+//   (): S;
+// }
+
+interface Selector<S> {
+  (store: S): unknown;
+}
+
 interface StoreType<S> {
   set(getStoreRef: GetStoreRef<S>): void;
-
+  // selector
+  get<Target extends Selector<S>>(target: Target): ReturnType<Target>;
+  // suggestion
   get<Target>(
     target: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>
   ): StoreDataByTarget<S, Target>;
+  // selector
+  get<T extends Selector<S> | StoreDataKey<S>>(
+    selector: T
+  ): T extends Selector<S> ? ReturnType<T> : StoreDataByTarget<S, T>;
 
   get(): S;
 
@@ -41,12 +74,17 @@ interface StoreType<S> {
     target: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>,
     callback: (data: StoreDataByTarget<S, Target>) => void
   ): () => void;
-
+  // selector
+  <Target extends Selector<S>>(target: Target): ReturnType<Target>;
+  // string output
   <Target>(
     target: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>
   ): StoreDataByTarget<S, Target>;
-
+  // string sugg
+  <T extends Selector<S> | StoreDataKey<S>>(
+    selector: T
+  ): T extends Selector<S> ? ReturnType<T> : StoreDataByTarget<S, T>;
   (): S;
 }
 
-export type { StoreType, FunctionType };
+export type { StoreType, FunctionType, Unknow };
