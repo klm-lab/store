@@ -59,7 +59,7 @@ const init = <S>(store: S, fn?: FunctionType): StoreType<S> => {
   const draft = proxy(store);
   const cb = new Set<FunctionType>();
   /* This selector cache is because of how react handles things,
-   * To avoid unlimited render, we will the same cached value to react
+   * To avoid unlimited render, we will send the cached value to react
    * The key of the cache is the target
    *  */
   let selectorCache: Unknown = {};
