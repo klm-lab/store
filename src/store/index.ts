@@ -89,7 +89,7 @@ const init = <S>(store: S, fn?: FunctionType): StoreType<S> => {
     }
     return selectorCache[target];
   };
-  const get = (target: Unknown, equalityCheck?: EqualityCheck) => {
+  const get = (target: Unknown, equalityCheck?: EqualityCheck<Unknown>) => {
     // We sync again because, for 'get' always send immutable data
     const newData = getTargetData(target, sync(draft));
     if (permanentCache[target]) {
@@ -116,7 +116,7 @@ const init = <S>(store: S, fn?: FunctionType): StoreType<S> => {
   const listen = (
     target: Unknown,
     callback: FunctionType,
-    equalityCheck?: EqualityCheck
+    equalityCheck?: EqualityCheck<Unknown>
   ) => {
     let cache = getTargetData(target, sync(draft));
     return sub(() => {
@@ -128,7 +128,7 @@ const init = <S>(store: S, fn?: FunctionType): StoreType<S> => {
     });
   };
 
-  const output = (target: Unknown, equalityCheck?: EqualityCheck) =>
+  const output = (target: Unknown, equalityCheck?: EqualityCheck<Unknown>) =>
     fn ? fn(() => get(target, equalityCheck), sub) : get(target);
   output.get = get;
   output.set = set;
