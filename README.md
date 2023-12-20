@@ -94,21 +94,18 @@ Get your store and return whatever you want in any format
 import { useExpStore } from "./store";
 
 const MyComponent = () => {
-
-  // Realtime update for React users
+  
   const { exp } = useExpStore(store => ({exp: store.exp}));
-
-  // ❗ this is just a snapshot, No realtime changes
-  const { exp } = useExpStore.get(store => ({exp: store.exp}));
-
-  // ❗ this is just a snapshot, No realtime changes
-  const exp = useExpStore.get(store => store.exp);
-
-  // Realtime update available for React users
+  
+  const [exp,other] = useExpStore(store => [store.exp,store.other]);
+  
   const exp = useExpStore(store => store.exp);
 
   // Deep data with realtime update
-  const deepValue = useExpStore("data.depp.moreDeep");
+  const deepValue = useExpStore(store => store.data.depp.moreDeep);
+
+  // ❗ Just a snapshot, No realtime changes
+  const exp = useExpStore.get(store => store.exp);
 
   return <span>{exp}</span>;
 };
@@ -150,6 +147,22 @@ The listen method returns an unsubscribe function
 const unsubscribe = myStore.listen('data', (data) => {})
 
 unsubscribe()
+```
+
+### Limit render
+
+By default `aio-store` use strict equality to prevent unnecessary render.<br/>
+For more control, you can use any data equality function as long as it returns a boolean.
+
+```js
+// String selector
+const data = myStore("data",(oldValue, newValue) => sameOrNot)
+
+// Function selector
+const data = myStore(store => store.data, (oldValue, newValue) => sameOrNot)
+
+// Listener selector
+const data = myStore("data",callback, (oldValue, newValue) => sameOrNot)
 ```
 
 ### Mutation
@@ -302,7 +315,7 @@ myStore.set(storeRef => {
 [MIT][license-url]
 
 
-[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-store/2.5.0?style=for-the-badge
+[size-shield]: https://img.shields.io/bundlephobia/minzip/aio-store?style=for-the-badge
 [dependencies-shield]: https://img.shields.io/badge/dependencies-0-green?style=for-the-badge
 [license-shield]: https://img.shields.io/github/license/klm-lab/store?style=for-the-badge
 [version-shield]: https://img.shields.io/npm/v/aio-store?style=for-the-badge
