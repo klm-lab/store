@@ -1,4 +1,4 @@
-type Unknow = any;
+type Unknown = any;
 type StoreKeys<S> = {
   [Key in keyof S & string]: S[Key] extends
     | Map<any, any>
@@ -24,6 +24,7 @@ type StoreDataByTarget<S, K> = K extends keyof S
 type CustomSuggestionType<S, K> = K extends "*" ? S : never;
 
 type FunctionType = (...args: any) => any;
+type EqualityCheck = (arg1: Unknown, arg2: Unknown) => boolean;
 
 interface GetStoreRef<S> {
   (storeRef: S): void;
@@ -72,19 +73,25 @@ interface StoreType<S> {
 
   listen<Target>(
     target: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>,
-    callback: (data: StoreDataByTarget<S, Target>) => void
+    callback: (data: StoreDataByTarget<S, Target>) => void,
+    equalityCheck?: EqualityCheck
   ): () => void;
   // selector
-  <Target extends Selector<S>>(target: Target): ReturnType<Target>;
+  <Target extends Selector<S>>(
+    target: Target,
+    equalityCheck?: EqualityCheck
+  ): ReturnType<Target>;
   // string output
   <Target>(
-    target: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>
+    target: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>,
+    equalityCheck?: EqualityCheck
   ): StoreDataByTarget<S, Target>;
   // string sugg
   <T extends Selector<S> | StoreDataKey<S>>(
-    selector: T
+    selector: T,
+    equalityCheck?: EqualityCheck
   ): T extends Selector<S> ? ReturnType<T> : StoreDataByTarget<S, T>;
   (): S;
 }
 
-export type { StoreType, FunctionType, Unknow };
+export type { StoreType, FunctionType, Unknown, EqualityCheck };

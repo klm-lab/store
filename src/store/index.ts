@@ -1,12 +1,12 @@
-import type { FunctionType, StoreType, Unknow } from "../types";
+import type { EqualityCheck, FunctionType, StoreType, Unknown } from "../types";
 
 const O = Object;
 const entries = O.entries;
 const fromEntries = O.fromEntries;
 
-const isObject = (data: Unknow) => data?.constructor?.name === "Object";
+const isObject = (data: Unknown) => data?.constructor?.name === "Object";
 // Sync removes the proxy
-const sync = (data: Unknow): Unknow => {
+const sync = (data: Unknown): Unknown => {
   if (data instanceof Array) {
     return data.map(sync);
   }
@@ -27,18 +27,18 @@ const sync = (data: Unknow): Unknow => {
 
 const trap = () => {
   return {
-    set: (state: Unknow, key: Unknow, value: Unknow) => {
+    set: (state: Unknown, key: Unknown, value: Unknown) => {
       state[key] = proxy(value);
       return true;
     },
-    deleteProperty: (target: Unknow, prop: Unknow) => {
+    deleteProperty: (target: Unknown, prop: Unknown) => {
       delete target[prop];
       return true;
     }
   };
 };
 
-const proxy = (data: Unknow): Unknow => {
+const proxy = (data: Unknown): Unknown => {
   // console.log("entered with =>", event, helpers.rootEvent, typeof event);
   if (data instanceof Array) {
     return new Proxy(data.map(proxy), trap());
@@ -58,30 +58,52 @@ const proxy = (data: Unknow): Unknow => {
 const init = <S>(store: S, fn?: FunctionType): StoreType<S> => {
   const draft = proxy(store);
   const cb = new Set<FunctionType>();
-  let selectorCache: Unknow = {};
+  /* This selector cache is because of how react handles things,
+   * To avoid unlimited render, we will the same cached value to react
+   * The key of the cache is the target
+   *  */
+  let selectorCache: Unknown = {};
+  /* This is for deep equality check if present, we track old value here
+   * The key is the target
+   * */
+  const permanentCache: Unknown = {};
 
   const set = (callback: FunctionType) => {
     callback(draft);
-    // Syncing the store
-    store = sync(draft);
+    // clear selector cache because changes happen
     selectorCache = {};
     // Dispatch all changes
     cb.forEach((listener: FunctionType) => listener());
   };
 
-  const vGet = (target: Unknow = "*") => get(target, sync(draft));
-
-  const get = (target: Unknow, data: Unknow) => {
-    if (target.call) {
-      if (!selectorCache[target]) {
+  const getTargetData = (target: Unknown = "*", data: Unknown) => {
+    if (!selectorCache[target]) {
+      if (target?.call) {
         selectorCache[target] = target(data);
+      } else {
+        target.split(".").forEach((p: string) => {
+          data = target === "*" ? data : data ? data[p] : data;
+        });
+        selectorCache[target] = data;
       }
-      return selectorCache[target];
     }
-    target.split(".").forEach((p: string) => {
-      data = target === "*" ? data : data ? data[p] : data;
-    });
-    return data;
+    return selectorCache[target];
+  };
+  const get = (target: Unknown, equalityCheck?: EqualityCheck) => {
+    // We sync again because, for 'get' always send immutable data
+    const newData = getTargetData(target, sync(draft));
+    if (permanentCache[target]) {
+      if (
+        equalityCheck
+          ? equalityCheck(permanentCache[target], newData)
+          : permanentCache[target] !== newData
+      ) {
+        permanentCache[target] = newData;
+      }
+      return permanentCache[target];
+    }
+    permanentCache[target] = newData;
+    return newData;
   };
 
   const sub = (listener: FunctionType) => {
@@ -91,24 +113,26 @@ const init = <S>(store: S, fn?: FunctionType): StoreType<S> => {
     };
   };
 
-  const listen = (target: string, callback: FunctionType) => {
-    let cache = vGet(target);
+  const listen = (
+    target: Unknown,
+    callback: FunctionType,
+    equalityCheck?: EqualityCheck
+  ) => {
+    let cache = getTargetData(target, sync(draft));
     return sub(() => {
-      const value = vGet(target);
-      if (value !== cache) {
-        callback(value);
-        cache = value;
+      const newData = getTargetData(target, sync(draft));
+      if (equalityCheck ? equalityCheck(cache, newData) : cache !== newData) {
+        cache = newData;
+        callback(cache);
       }
     });
   };
 
-  const output = (target?: string) =>
-    fn
-      ? fn((target: Unknow = "*") => get(target, store), sub, target)
-      : vGet(target);
-  output.get = vGet;
+  const output = (target: Unknown, equalityCheck?: EqualityCheck) =>
+    fn ? fn(() => get(target, equalityCheck), sub) : get(target);
+  output.get = get;
   output.set = set;
   output.listen = listen;
-  return output;
+  return output as StoreType<S>;
 };
 export { init as createStore };
