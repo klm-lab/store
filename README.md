@@ -149,6 +149,16 @@ const unsubscribe = myStore.listen('data', (data) => {})
 unsubscribe()
 ```
 
+* **Reset**
+
+Reset your store to its initial state
+
+```js
+import { useExpStore } from "./store";
+
+useExpStore.reset();
+```
+
 ### Limit render
 
 By default `aio-store` use strict equality to prevent unnecessary render.<br/>
@@ -306,6 +316,7 @@ myStore.set(storeRef => {
 * `set` A property attached to your store that lets you dispatch actions from any file.
 * `get` A Function attached to your store that lets you get a snapshot of your store at any time.
 * `listen` A Function attached to your store that lets you listen to changes in all or specific part of your store.
+* `reset` A Function attached to your store that lets you reset it to its initial state.
 * `*` A key that can be passed to your store in order to get everything or to listen to all changes in your store.
 
 <!-- LICENSE -->

@@ -56,7 +56,7 @@ const proxy = (data: Unknown): Unknown => {
 };
 
 const init = <S>(store: S, fn?: FunctionType): StoreType<S> => {
-  const draft = proxy(store);
+  let draft = proxy(store);
   const cb = new Set<FunctionType>();
   /* This selector cache is because of how react handles things,
    * To avoid unlimited render, we will send the cached value to react
@@ -68,12 +68,21 @@ const init = <S>(store: S, fn?: FunctionType): StoreType<S> => {
    * */
   const permanentCache: Unknown = {};
 
-  const set = (callback: FunctionType) => {
-    callback(draft);
+  const annouceChanges = () => {
     // clear selector cache because changes happen
     selectorCache = {};
     // Dispatch all changes
     cb.forEach((listener: FunctionType) => listener());
+  };
+
+  const set = (callback: FunctionType) => {
+    callback(draft);
+    annouceChanges();
+  };
+
+  const reset = () => {
+    draft = proxy(store);
+    annouceChanges();
   };
 
   const getTargetData = (target: Unknown = "*", data: Unknown) => {
@@ -133,6 +142,7 @@ const init = <S>(store: S, fn?: FunctionType): StoreType<S> => {
   output.get = get;
   output.set = set;
   output.listen = listen;
+  output.reset = reset;
   return output as StoreType<S>;
 };
 export { init as createStore };
