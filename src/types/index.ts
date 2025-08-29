@@ -70,6 +70,7 @@ interface StoreType<S> {
   ): T extends Selector<S> ? ReturnType<T> : StoreDataByTarget<S, T>;
 
   get(): S;
+  reset(): void;
 
   listen<Target>(
     target: Target extends StoreDataKey<S> ? Target : StoreDataKey<S>,
